@@ -1418,7 +1418,7 @@ document.getElementById('btn-hide').addEventListener('click', () => ipcRenderer.
 document.getElementById('btn-maximize').addEventListener('click', () => ipcRenderer.send('maximize-window'));
 
 // ─── Tab Switching ────────────────────────────────────────────────────────────
-const ALL_TABS = ['resumen', 'proyectos', 'jira', 'workspaces', 'actividad', 'calendario', 'configuracion', 'gemini', 'joplin', 'keepass'];
+const ALL_TABS = ['resumen', 'proyectos', 'jira', 'todo', 'workspaces', 'actividad', 'calendario', 'configuracion', 'gemini', 'joplin', 'keepass'];
 
 function switchTab(tabId, el) {
   document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
