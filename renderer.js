@@ -1496,6 +1496,32 @@ function switchTabByName(tabId) {
 }
 window.switchTabByName = switchTabByName;
 
+// Config Tabs Switcher
+function switchConfigTab(tabName) {
+  // Update buttons
+  const buttons = document.querySelectorAll('.config-tab-btn');
+  buttons.forEach(btn => {
+    if (btn.getAttribute('onclick').includes(tabName)) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Update contents
+  const contents = document.querySelectorAll('.config-tab-content');
+  contents.forEach(content => {
+    if (content.id === 'config-tab-' + tabName) {
+      content.classList.remove('hidden');
+      content.classList.add('active');
+    } else {
+      content.classList.add('hidden');
+      content.classList.remove('active');
+    }
+  });
+}
+window.switchConfigTab = switchConfigTab;
+
 // Dashboard Jira filter tabs
 function dashJiraFilter(filter, el) {
   document.querySelectorAll('#dash-jira-tab-mis, #dash-jira-tab-equipo, #dash-jira-tab-todas')
