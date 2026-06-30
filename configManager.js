@@ -15,6 +15,21 @@ const DEFAULT_EDITORS = [
   { id: 'powershell',  name: 'PowerShell',           command: 'powershell',      args: ['-NoExit', '-Command', 'cd'], icon: 'terminal' },
 ];
 
+function getDefaultTerminal() {
+  if (process.platform === 'win32') return { name: 'PowerShell', command: 'powershell', args: [] };
+  if (process.platform === 'darwin') return { name: 'Terminal', command: 'open', args: ['-a', 'Terminal', '.'] };
+  return { name: 'Terminal', command: 'x-terminal-emulator', args: ['-e', process.env.SHELL || 'bash'] };
+}
+
+function getDefaultFileManager() {
+  if (process.platform === 'win32') return { name: 'Explorador', command: 'explorer', args: ['.'] };
+  if (process.platform === 'darwin') return { name: 'Finder', command: 'open', args: ['.'] };
+  return { name: 'Archivos', command: 'xdg-open', args: ['.'] };
+}
+
+const defaultTerminal = getDefaultTerminal();
+const defaultFileManager = getDefaultFileManager();
+
 const DEFAULT_WORKSPACES = [
   {
     id: 'workspace_default',
@@ -22,8 +37,8 @@ const DEFAULT_WORKSPACES = [
     description: 'Abre este proyecto con editor, terminal y explorador.',
     items: [
       { id: 'ws_item_vscode', type: 'app', name: 'VS Code', command: 'code', args: ['.'], cwd: process.cwd(), icon: 'vscode' },
-      { id: 'ws_item_terminal', type: 'terminal', name: 'PowerShell', command: 'powershell', args: [], cwd: process.cwd(), icon: 'terminal' },
-      { id: 'ws_item_explorer', type: 'app', name: 'Explorador', command: 'explorer', args: ['.'], cwd: process.cwd(), icon: 'folder' }
+      { id: 'ws_item_terminal', type: 'terminal', name: defaultTerminal.name, command: defaultTerminal.command, args: defaultTerminal.args, cwd: process.cwd(), icon: 'terminal' },
+      { id: 'ws_item_files', type: 'app', name: defaultFileManager.name, command: defaultFileManager.command, args: defaultFileManager.args, cwd: process.cwd(), icon: 'folder' }
     ]
   }
 ];
@@ -32,18 +47,21 @@ const defaultConfig = {
   profiles: [
     {
       id: 'default_1',
-      name: 'SPRM Proyectos',
-      repos: [
-        'd:\\DESARROLLO\\UTL\\SPRM\\frontend',
-        'd:\\DESARROLLO\\UTL\\SPRM\\backend'
-      ],
-      jira: { baseUrl: '', email: '', token: '' }
+      name: 'Default',
+      repos: [],
+      jira: { baseUrl: '', email: '', token: '' },
+      tools: { gemini: true, joplin: true, keepass: true }
     }
   ],
   editors: DEFAULT_EDITORS,
   repoEditors: {},   // { "repoPath": "editorId" }
   workspaces: DEFAULT_WORKSPACES,
-  appIconPath: ''
+  appIconPath: '',
+  integrations: {
+    gemini: { apiKey: '', model: 'gemini-2.5-flash' },
+    joplin: { baseUrl: 'http://127.0.0.1:41184', token: '' },
+    keepass: { databasePath: '', keyFile: '', cliPath: '' }
+  }
 };
 
 function normalizeConfig(cfg = {}) {
@@ -54,7 +72,22 @@ function normalizeConfig(cfg = {}) {
     editors: Array.isArray(cfg.editors) ? cfg.editors : DEFAULT_EDITORS,
     repoEditors: cfg.repoEditors && typeof cfg.repoEditors === 'object' ? cfg.repoEditors : {},
     workspaces: Array.isArray(cfg.workspaces) ? cfg.workspaces : DEFAULT_WORKSPACES,
-    appIconPath: cfg.appIconPath || ''
+    appIconPath: cfg.appIconPath || '',
+    integrations: {
+      gemini: {
+        apiKey: cfg.integrations?.gemini?.apiKey || '',
+        model: cfg.integrations?.gemini?.model || 'gemini-2.5-flash'
+      },
+      joplin: {
+        baseUrl: cfg.integrations?.joplin?.baseUrl || 'http://127.0.0.1:41184',
+        token: cfg.integrations?.joplin?.token || ''
+      },
+      keepass: {
+        databasePath: cfg.integrations?.keepass?.databasePath || '',
+        keyFile: cfg.integrations?.keepass?.keyFile || '',
+        cliPath: cfg.integrations?.keepass?.cliPath || ''
+      }
+    }
   };
 
   merged.profiles = merged.profiles.map(profile => ({
@@ -66,6 +99,11 @@ function normalizeConfig(cfg = {}) {
       email: profile.jira?.email || '',
       token: profile.jira?.token || '',
       projectKey: profile.jira?.projectKey || ''
+    },
+    tools: {
+      gemini: profile.tools?.gemini !== false,
+      joplin: profile.tools?.joplin !== false,
+      keepass: profile.tools?.keepass !== false
     }
   }));
 
@@ -143,6 +181,16 @@ function setAppIconPath(appIconPath) {
   saveConfig(cfg);
 }
 
+function getIntegrations() {
+  return loadConfig().integrations;
+}
+
+function saveIntegrations(integrations) {
+  const cfg = loadConfig();
+  cfg.integrations = integrations;
+  saveConfig(cfg);
+}
+
 module.exports = {
   loadConfig,
   saveConfig,
@@ -155,6 +203,8 @@ module.exports = {
   saveWorkspaces,
   getAppIconPath,
   setAppIconPath,
+  getIntegrations,
+  saveIntegrations,
   DEFAULT_EDITORS,
   DEFAULT_WORKSPACES
 };

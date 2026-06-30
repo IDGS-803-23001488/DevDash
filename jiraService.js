@@ -79,7 +79,7 @@ async function getMyTickets(jiraConfig) {
   try {
     const response = await searchIssues(client, {
       jql: 'assignee = currentUser() ORDER BY updated DESC',
-      maxResults: 20,
+      maxResults: 100,
       fields: ['summary', 'status', 'issuetype', 'assignee']
     });
     return { success: true, issues: formatIssues(response.data.issues) };
@@ -98,7 +98,7 @@ async function getAllTickets(jiraConfig) {
       : 'assignee = currentUser() ORDER BY updated DESC';
     const response = await searchIssues(client, {
       jql,
-      maxResults: 25,
+      maxResults: 100,
       fields: ['summary', 'status', 'issuetype', 'assignee']
     });
     return { success: true, issues: formatIssues(response.data.issues) };
@@ -223,6 +223,58 @@ async function addComment(jiraConfig, issueKey, text) {
     return { success: false, error: formatJiraError(error) };
   }
 }
+async function getAssignableUsers(jiraConfig) {
+  const client = createClient(jiraConfig);
+  if (!client) return { success: false, error: 'Credenciales incompletas' };
+  try {
+    const projectKey = jiraConfig.projectKey || jiraConfig.project;
+    if (!projectKey) return { success: false, error: 'No hay Project Key configurado.' };
+    const response = await client.get(`/user/assignable/search?project=${projectKey}`);
+    return { success: true, users: response.data };
+  } catch (error) {
+    return { success: false, error: formatJiraError(error) };
+  }
+}
+
+async function createIssue(jiraConfig, issueData) {
+  const client = createClient(jiraConfig);
+  if (!client) return { success: false, error: 'Credenciales incompletas' };
+  try {
+    const projectKey = jiraConfig.projectKey || jiraConfig.project;
+    if (!projectKey) return { success: false, error: 'No hay Project Key configurado.' };
+    
+    // Jira V3 API text description requires ADF (Atlassian Document Format) if we are on V3, but fields.description can often be text in V2.
+    // We'll use the doc format just in case it enforces ADF like comments do.
+    const descriptionAdf = {
+      type: 'doc',
+      version: 1,
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: issueData.description || '' }]
+        }
+      ]
+    };
+
+    const payload = {
+      fields: {
+        project: { key: projectKey },
+        summary: issueData.summary,
+        description: descriptionAdf,
+        issuetype: { name: issueData.issuetype || 'Task' }
+      }
+    };
+
+    if (issueData.assigneeId) {
+      payload.fields.assignee = { accountId: issueData.assigneeId };
+    }
+
+    const response = await client.post('/issue', payload);
+    return { success: true, key: response.data.key };
+  } catch (error) {
+    return { success: false, error: formatJiraError(error) };
+  }
+}
 
 module.exports = {
   testConnection,
@@ -231,5 +283,7 @@ module.exports = {
   getIssueDetails,
   getIssueTransitions,
   transitionIssue,
-  addComment
+  addComment,
+  getAssignableUsers,
+  createIssue
 };

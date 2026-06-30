@@ -1,0 +1,144 @@
+<!-- Main Content -->
+<main class="main-content" id="tab-resumen">
+      <header class="header">
+        <div class="header-titles">
+          <h1>Resumen</h1>
+          <p>Panorama general de tus proyectos y tareas</p>
+        </div>
+        <div class="header-actions">
+          <div class="clock-widget">
+            <i data-lucide="sun" style="width:24px; height:24px; color:#64748b;"></i>
+            <div class="clock-text">
+              <div class="time" id="clock-time">10:42:35</div>
+              <div class="date" id="clock-date">Cargando fecha...</div>
+            </div>
+          </div>
+          <button class="btn-refresh" onclick="init()">
+            <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i>
+            Actualizar
+          </button>
+        </div>
+      </header>
+
+      <!-- Estadísticas KPI -->
+      <div class="stats-grid">
+        <div class="stat-card stat-clickable" onclick="switchTabByName('proyectos')" title="Ver repositorios">
+          <div class="stat-icon icon-green">
+            <i data-lucide="git-branch" style="width:20px; height:20px;"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-number" id="metric-repos">0</span>
+            <span class="stat-label">Repositorios sincronizados</span>
+          </div>
+        </div>
+        <div class="stat-card stat-clickable" onclick="switchTabByName('proyectos')" title="Ver repos con cambios">
+          <div class="stat-icon icon-blue">
+            <i data-lucide="file-edit" style="width:20px; height:20px;"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-number" id="metric-dirty">0</span>
+            <span class="stat-label">Repositorios con cambios</span>
+          </div>
+        </div>
+        <div class="stat-card stat-clickable" onclick="switchTabByName('jira')" title="Ver tareas activas">
+          <div class="stat-icon icon-orange">
+            <i data-lucide="clock" style="width:20px; height:20px;"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-number" id="metric-tasks-active">0</span>
+            <span class="stat-label">Tareas activas en progreso</span>
+          </div>
+        </div>
+        <div class="stat-card stat-clickable" onclick="switchTabByName('jira')" title="Ver todas las tareas">
+          <div class="stat-icon icon-purple">
+            <i data-lucide="check-circle" style="width:20px; height:20px;"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-number" id="metric-tasks-total">0</span>
+            <span class="stat-label">Tareas Totales (Cargadas)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenido Principal: Gráficos -->
+      <div class="dashboard-charts" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 10px;">
+        
+        <!-- Chart 1: Jira (Donut) -->
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <i data-lucide="check-square" style="width:20px; height:20px;"></i>
+              Estado de Tareas
+            </h2>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 20px 0; height:220px;">
+            <div class="donut-chart" id="jira-donut" style="--p-todo: 0%; --p-prog: 0%; --p-done: 0%;">
+              <div class="donut-inner">
+                <span id="jira-total-text" style="font-size:24px; font-weight:bold; color:var(--text-main);">0</span>
+                <span style="font-size:12px; color:var(--text-muted);">Tareas</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:16px; margin-top:20px; font-size:13px;">
+              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span> Por Hacer (<span id="j-todo">0</span>)</div>
+              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span> En Progreso (<span id="j-prog">0</span>)</div>
+              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#10b981;"></span> Listo (<span id="j-done">0</span>)</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Chart 2: Git Status (Horizontal Bars) -->
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <i data-lucide="folder-git-2" style="width:20px; height:20px;"></i>
+              Salud de Repositorios
+            </h2>
+          </div>
+          <div style="display:flex; flex-direction:column; justify-content:center; gap: 20px; padding: 20px; height:220px;">
+            <div class="bar-horizontal-wrap">
+              <div class="bar-label">
+                <span>Limpios (Sincronizados)</span>
+                <span id="git-clean-val">0</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" id="git-clean-bar" style="width:0%; background: linear-gradient(90deg, #10b981, #34d399);"></div>
+              </div>
+            </div>
+            <div class="bar-horizontal-wrap">
+              <div class="bar-label">
+                <span>Con Cambios Locales</span>
+                <span id="git-dirty-val">0</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" id="git-dirty-bar" style="width:0%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+              </div>
+            </div>
+            <div class="bar-horizontal-wrap">
+              <div class="bar-label">
+                <span>Desactualizados (Ahead/Behind)</span>
+                <span id="git-sync-val">0</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" id="git-sync-bar" style="width:0%; background: linear-gradient(90deg, #ef4444, #f87171);"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Chart 3: Actividad (Vertical Bars) -->
+        <section class="card" style="grid-column: span 2;">
+          <div class="card-header">
+            <h2 class="card-title">
+              <i data-lucide="activity" style="width:20px; height:20px;"></i>
+              Actividad de Commits (Últimos 7 días)
+            </h2>
+          </div>
+          <div class="bar-chart-vertical" id="activity-chart" style="height: 200px; padding: 20px; display:flex; align-items:flex-end; gap:20px; justify-content:space-around;">
+            <div style="color:var(--text-muted); font-size:13px;">Cargando actividad...</div>
+          </div>
+        </section>
+
+      </div>
+
+    </main>
+

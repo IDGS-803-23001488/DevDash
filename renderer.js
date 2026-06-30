@@ -1742,31 +1742,72 @@ function addWorkspace() {
 }
 window.addWorkspace = addWorkspace;
 
+function closeWorkspaceModal() {
+  document.getElementById('modal-workspace-config').classList.add('hidden');
+}
+window.closeWorkspaceModal = closeWorkspaceModal;
+
 function editWorkspace(index) {
   const workspace = workspaces[index];
   if (!workspace) return;
-  const modal = document.getElementById('modal-overlay');
-  const title = document.getElementById('modal-title');
-  const body = document.getElementById('modal-body');
-  title.textContent = 'Configurar workspace';
+  const modal = document.getElementById('modal-workspace-config');
+  const body = document.getElementById('workspace-config-body');
+  
   body.innerHTML = `
-    <div class="workspace-form">
-      <label>Nombre</label>
-      <input id="workspace-name-input" class="settings-input" value="${escapeHtml(workspace.name)}">
-      <label>Descripcion</label>
-      <input id="workspace-desc-input" class="settings-input" value="${escapeHtml(workspace.description || '')}" placeholder="Ej. Backend + frontend + terminales">
-
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:18px;">
-        <h3 style="font-size:14px; margin:0;">Acciones</h3>
-        <button class="btn-refresh" onclick="addWorkspaceItem(${index})"><i data-lucide="plus" style="width:14px;height:14px;"></i> Agregar</button>
+    <div style="display:flex; flex-direction:column; margin-bottom: 20px;">
+      <label style="font-weight: 600; color: #374151; margin-bottom: 8px; font-size:14px;">Nombre del workspace</label>
+      <div style="position:relative;">
+        <i data-lucide="edit-2" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#10b981; width:16px;"></i>
+        <input id="workspace-name-input" value="${escapeHtml(workspace.name)}" style="width:100%; box-sizing:border-box; padding:10px 12px 10px 36px; border:1px solid #10b981; border-radius:8px; color:#111827; outline:none; font-size:14px;">
+        <i data-lucide="check-circle-2" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#10b981; width:18px;"></i>
       </div>
-      <div id="workspace-items-editor" class="workspace-items-editor">
+    </div>
+
+    <div style="display:flex; flex-direction:column; margin-bottom: 24px;">
+      <label style="font-weight: 600; color: #374151; margin-bottom: 8px; font-size:14px;">Descripción <span style="color:#9ca3af; font-weight:normal;">(opcional)</span></label>
+      <div style="position:relative;">
+        <i data-lucide="message-square" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; width:16px;"></i>
+        <input id="workspace-desc-input" value="${escapeHtml(workspace.description || '')}" style="width:100%; box-sizing:border-box; padding:10px 60px 10px 36px; border:1px solid #e5e7eb; border-radius:8px; color:#111827; outline:none; font-size:14px;" placeholder="Ej. Backend + frontend + terminales">
+        <span style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:12px;">0/120</span>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+      <h3 style="margin:0; font-size:16px; color:#111827;">Acciones</h3>
+      <button onclick="openWorkspaceAddActionModal(${index})" style="background:none; border:none; color:#10b981; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:14px;">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i> Agregar acción
+      </button>
+    </div>
+
+    <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+      ${workspace.items && workspace.items.length > 0 ? `
+        <div style="display:grid; grid-template-columns: 120px 1fr 1.5fr 1fr 32px; gap: 12px; margin-bottom: 8px; padding:0 4px;">
+          <div style="font-size:12px; font-weight:600; color:#6b7280;">Tipo</div>
+          <div style="font-size:12px; font-weight:600; color:#6b7280;">Nombre</div>
+          <div style="font-size:12px; font-weight:600; color:#6b7280;">Comando / Ruta</div>
+          <div style="font-size:12px; font-weight:600; color:#6b7280;">Argumentos</div>
+          <div></div>
+        </div>
+      ` : ''}
+      <div id="workspace-items-editor">
         ${renderWorkspaceItemsEditor(workspace, index)}
       </div>
-      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-        <button class="btn-refresh" onclick="closeModal()">Cancelar</button>
-        <button class="update-btn" onclick="saveWorkspaceFromModal(${index})">Guardar workspace</button>
-      </div>
+      
+      <button onclick="openWorkspaceAddActionModal(${index})" style="width:100%; margin-top:12px; border: 1px dashed #d1d5db; border-radius: 6px; padding: 12px; background: none; color: #10b981; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-size:14px; transition: background 0.2s;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='none'">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i> Agregar otra acción
+      </button>
+    </div>
+
+    <div style="background: #eff6ff; border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px;">
+      <i data-lucide="info" style="color: #3b82f6; width: 18px; height: 18px; margin-top: 2px;"></i>
+      <div style="color: #4b5563; font-size: 13px;">Las acciones te permiten ejecutar comandos o abrir carpetas rápidamente desde tu workspace.</div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <button onclick="closeWorkspaceModal()" style="border:1px solid #e5e7eb; background:#fff; padding:10px 16px; border-radius:8px; color:#374151; font-weight:600; cursor:pointer; font-size:14px; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">Cancelar</button>
+      <button onclick="saveWorkspaceFromModal(${index})" style="background:#10b981; border:none; padding:10px 16px; border-radius:8px; color:#fff; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:14px; transition: background 0.2s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+        <i data-lucide="save" style="width:16px;height:16px;"></i> Guardar workspace
+      </button>
     </div>
   `;
   modal.classList.remove('hidden');
@@ -1776,71 +1817,152 @@ window.editWorkspace = editWorkspace;
 
 function renderWorkspaceItemsEditor(workspace, workspaceIndex) {
   if (!workspace.items || workspace.items.length === 0) {
-    return '<div style="color:var(--text-muted); font-size:13px; padding:12px;">Agrega apps, terminales o URLs para abrirlas juntas.</div>';
+    return '';
   }
   return workspace.items.map((item, itemIndex) => {
-    const commandLabel = item.type === 'url' ? 'URL' : 'Comando';
+    let typeIcon = 'layout-grid';
+    if (item.type === 'app') typeIcon = 'folder';
+    if (item.type === 'terminal') typeIcon = 'terminal';
+    if (item.type === 'url') typeIcon = 'link';
+    if (item.type === 'file') typeIcon = 'file';
+
+    const inputStyle = "width:100%; box-sizing:border-box; padding:8px 8px; border:1px solid #e5e7eb; border-radius:6px; background:#fff; font-size:13px; outline:none; color:#111827;";
+
     return `
-      <div class="workspace-item-editor" data-item-index="${itemIndex}">
-        <div class="workspace-item-editor-grid">
-          <select class="settings-input ws-item-type">
+      <div class="workspace-item-editor" data-item-index="${itemIndex}" style="display:grid; grid-template-columns: 120px 1fr 1.5fr 1fr 32px; gap: 12px; margin-bottom: 8px; align-items:center;">
+        
+        <div style="position:relative;">
+          <i data-lucide="${typeIcon}" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#10b981; width:14px; pointer-events:none;"></i>
+          <select class="ws-item-type" style="${inputStyle} padding-left:28px; appearance:none; cursor:pointer;" onchange="collectWorkspaceModal(${workspaceIndex}); editWorkspace(${workspaceIndex});">
             <option value="app" ${item.type === 'app' ? 'selected' : ''}>App</option>
             <option value="terminal" ${item.type === 'terminal' ? 'selected' : ''}>Terminal</option>
             <option value="url" ${item.type === 'url' ? 'selected' : ''}>URL</option>
+            <option value="file" ${item.type === 'file' ? 'selected' : ''}>Archivo/Doc</option>
           </select>
-          <input class="settings-input ws-item-name" value="${escapeHtml(item.name)}" placeholder="Nombre">
-          <input class="settings-input ws-item-command" value="${escapeHtml(item.type === 'url' ? item.url : item.command)}" placeholder="${commandLabel}">
-          <input class="settings-input ws-item-args" value="${escapeHtml((item.args || []).join(' '))}" placeholder="Argumentos">
-          <input class="settings-input ws-item-cwd" value="${escapeHtml(item.cwd || '')}" placeholder="Carpeta de trabajo">
+          <i data-lucide="chevron-down" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); color:#9ca3af; width:14px; pointer-events:none;"></i>
         </div>
-        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
-          <button class="btn-refresh" onclick="pickWorkspaceItemCwd(${workspaceIndex}, ${itemIndex})"><i data-lucide="folder-open" style="width:14px;height:14px;"></i> Carpeta</button>
-          <button class="btn-refresh danger" onclick="removeWorkspaceItem(${workspaceIndex}, ${itemIndex})"><i data-lucide="trash-2" style="width:14px;height:14px;"></i> Quitar</button>
+
+        <div>
+          <input class="ws-item-name" style="${inputStyle}" value="${escapeHtml(item.name)}" placeholder="Nombre">
         </div>
+
+        <div style="position:relative;">
+          <input class="ws-item-command" style="${inputStyle} padding-right:${item.type === 'url' ? '8px' : '32px'}" value="${escapeHtml(item.type === 'url' ? item.url : item.command)}">
+          ${item.type === 'file' ? `<button onclick="pickWorkspaceItemFile(${workspaceIndex}, ${itemIndex})" style="position:absolute; right:4px; top:50%; transform:translateY(-50%); background:none; border:none; color:#6b7280; cursor:pointer; padding:4px; display:flex; align-items:center;"><i data-lucide="file-search" style="width:14px;height:14px;"></i></button>` : ''}
+          ${item.type === 'app' || item.type === 'terminal' ? `<button onclick="pickWorkspaceItemCwd(${workspaceIndex}, ${itemIndex})" style="position:absolute; right:4px; top:50%; transform:translateY(-50%); background:none; border:none; color:#6b7280; cursor:pointer; padding:4px; display:flex; align-items:center;"><i data-lucide="folder-open" style="width:14px;height:14px;"></i></button>` : ''}
+        </div>
+
+        <div>
+          <input class="ws-item-args" style="${inputStyle} ${item.type === 'file' || item.type === 'url' ? 'display: none;' : ''}" value="${escapeHtml((item.args || []).join(' '))}" placeholder="--args">
+        </div>
+
+        <div style="display:flex; justify-content:center;">
+          <button onclick="removeWorkspaceItem(${workspaceIndex}, ${itemIndex})" style="background:none; border:none; cursor:pointer; color:#ef4444; padding:4px; display:flex; align-items:center; justify-content:center; border-radius:4px; transition:background 0.2s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">
+            <i data-lucide="trash-2" style="width:18px;height:18px;"></i>
+          </button>
+        </div>
+
+        <input class="ws-item-cwd" style="display:none;" value="${escapeHtml(item.cwd || '')}">
+
       </div>
     `;
   }).join('');
 }
 
-function collectWorkspaceModal(index) {
-  const workspace = workspaces[index];
-  workspace.name = document.getElementById('workspace-name-input')?.value.trim() || 'Workspace';
-  workspace.description = document.getElementById('workspace-desc-input')?.value.trim() || '';
-  const rows = document.querySelectorAll('#workspace-items-editor .workspace-item-editor');
-  workspace.items = Array.from(rows).map(row => {
-    const type = row.querySelector('.ws-item-type').value;
-    const commandValue = row.querySelector('.ws-item-command').value.trim();
-    return normalizeWorkspaceItem({
-      id: workspace.items?.[Number(row.dataset.itemIndex)]?.id,
-      type,
-      name: row.querySelector('.ws-item-name').value.trim() || commandValue || type,
-      command: type === 'url' ? '' : commandValue,
-      url: type === 'url' ? commandValue : '',
-      args: row.querySelector('.ws-item-args').value.trim().split(/\s+/).filter(Boolean),
-      cwd: row.querySelector('.ws-item-cwd').value.trim()
+let currentWorkspaceAddIndex = -1;
+
+function openWorkspaceAddActionModal(index) {
+  collectWorkspaceModal(index);
+  currentWorkspaceAddIndex = index;
+  document.getElementById('ws-add-type').value = 'app';
+  document.getElementById('ws-add-name').value = '';
+  document.getElementById('ws-add-command').value = '';
+  document.getElementById('ws-add-args').value = '';
+  document.getElementById('ws-add-cwd').value = profiles[activeProfileIndex]?.repos?.[0] || '';
+  updateWorkspaceAddActionForm();
+  document.getElementById('modal-workspace-add-action').classList.remove('hidden');
+  lucide.createIcons();
+}
+window.openWorkspaceAddActionModal = openWorkspaceAddActionModal;
+
+function closeWorkspaceAddActionModal() {
+  document.getElementById('modal-workspace-add-action').classList.add('hidden');
+}
+window.closeWorkspaceAddActionModal = closeWorkspaceAddActionModal;
+
+function updateWorkspaceAddActionForm() {
+  const type = document.getElementById('ws-add-type').value;
+  const commandLabel = document.getElementById('ws-add-command-label');
+  const browseIcon = document.getElementById('ws-add-browse-icon');
+  const argsContainer = document.getElementById('ws-add-args-container');
+  const cwdContainer = document.getElementById('ws-add-cwd-container');
+  const browseBtn = document.getElementById('ws-add-browse-btn');
+
+  commandLabel.textContent = type === 'url' ? 'URL' : (type === 'file' ? 'Ruta del archivo' : 'Comando / Ruta');
+  
+  if (type === 'file' || type === 'url') {
+    argsContainer.style.display = 'none';
+    cwdContainer.style.display = 'none';
+  } else {
+    argsContainer.style.display = 'block';
+    cwdContainer.style.display = 'block';
+  }
+
+  if (type === 'url') {
+    browseBtn.style.display = 'none';
+    document.getElementById('ws-add-command').style.paddingRight = '10px';
+  } else {
+    browseBtn.style.display = 'flex';
+    document.getElementById('ws-add-command').style.paddingRight = '36px';
+    if (type === 'file') {
+      browseIcon.setAttribute('data-lucide', 'file-search');
+    } else {
+      browseIcon.setAttribute('data-lucide', 'folder-open');
+    }
+  }
+  lucide.createIcons();
+}
+window.updateWorkspaceAddActionForm = updateWorkspaceAddActionForm;
+
+async function browseWorkspaceAddAction() {
+  const type = document.getElementById('ws-add-type').value;
+  if (type === 'file') {
+    const selected = await ipcRenderer.invoke('select-file', {
+      filters: [
+        { name: 'Documentos y Ejecutables', extensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'exe', 'bat', 'cmd', 'ps1', 'png', 'jpg', 'md'] },
+        { name: 'Todos los archivos', extensions: ['*'] }
+      ]
     });
-  });
+    if (selected) document.getElementById('ws-add-command').value = selected;
+  } else {
+    const selected = await ipcRenderer.invoke('select-directory');
+    if (selected) document.getElementById('ws-add-command').value = selected;
+  }
 }
+window.browseWorkspaceAddAction = browseWorkspaceAddAction;
 
-async function saveWorkspaceFromModal(index) {
-  collectWorkspaceModal(index);
-  await persistWorkspaces();
-  closeModal();
-  notify('Workspace guardado', workspaces[index].name, 'success');
-}
-window.saveWorkspaceFromModal = saveWorkspaceFromModal;
+function submitWorkspaceAddAction() {
+  if (currentWorkspaceAddIndex === -1) return;
+  const type = document.getElementById('ws-add-type').value;
+  const name = document.getElementById('ws-add-name').value.trim();
+  const commandValue = document.getElementById('ws-add-command').value.trim();
+  const args = document.getElementById('ws-add-args').value.trim().split(/\s+/).filter(Boolean);
+  const cwd = document.getElementById('ws-add-cwd').value.trim();
 
-function addWorkspaceItem(index) {
-  collectWorkspaceModal(index);
-  workspaces[index].items.push(normalizeWorkspaceItem({
-    type: 'terminal',
-    name: 'Terminal',
-    command: 'powershell',
-    cwd: profiles[activeProfileIndex]?.repos?.[0] || ''
+  workspaces[currentWorkspaceAddIndex].items.push(normalizeWorkspaceItem({
+    type,
+    name: name || commandValue || type,
+    command: type === 'url' ? '' : commandValue,
+    url: type === 'url' ? commandValue : '',
+    args,
+    cwd
   }));
-  editWorkspace(index);
+
+  closeWorkspaceAddActionModal();
+  editWorkspace(currentWorkspaceAddIndex);
 }
-window.addWorkspaceItem = addWorkspaceItem;
+window.submitWorkspaceAddAction = submitWorkspaceAddAction;
+
 
 function removeWorkspaceItem(workspaceIndex, itemIndex) {
   collectWorkspaceModal(workspaceIndex);
@@ -2323,3 +2445,28 @@ async function toggleCommitDiff(element, repoPath, hash) {
   }
 }
 window.toggleCommitDiff = toggleCommitDiff;
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('modal-workspace-add-action') && !document.getElementById('modal-workspace-add-action').classList.contains('hidden')) {
+      if (typeof closeWorkspaceAddActionModal === 'function') closeWorkspaceAddActionModal();
+      return;
+    }
+    if (document.getElementById('modal-workspace-config') && !document.getElementById('modal-workspace-config').classList.contains('hidden')) {
+      if (typeof closeWorkspaceModal === 'function') closeWorkspaceModal();
+      return;
+    }
+    if (document.getElementById('modal-create-jira') && !document.getElementById('modal-create-jira').classList.contains('hidden')) {
+      if (typeof closeCreateJiraModal === 'function') closeCreateJiraModal();
+      return;
+    }
+    if (document.getElementById('modal-scanner') && !document.getElementById('modal-scanner').classList.contains('hidden')) {
+      if (typeof closeScannerModal === 'function') closeScannerModal();
+      return;
+    }
+    if (document.getElementById('modal-overlay') && !document.getElementById('modal-overlay').classList.contains('hidden')) {
+      if (typeof closeModal === 'function') closeModal();
+      return;
+    }
+  }
+});

@@ -1,0 +1,39 @@
+<!-- Tab: Joplin -->
+<main class="main-content hidden integration-screen" data-tool="joplin" id="tab-joplin">
+      <header class="header">
+        <div class="header-titles">
+          <h1>Joplin</h1>
+          <p>Busca, crea y edita notas desde DevDash</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-refresh" onclick="switchTab('configuracion', document.getElementById('nav-config'))">
+            <i data-lucide="settings" style="width:16px;height:16px;"></i>
+            Configurar
+          </button>
+        </div>
+      </header>
+      <div class="tool-screen-layout single">
+        <section class="assistant-panel">
+          <div class="assistant-panel-header">
+            <div>
+              <h2>Joplin</h2>
+              <p>Busca, crea y edita notas.</p>
+            </div>
+            <button class="btn-refresh" onclick="showJoplinNote(null)">
+              <i data-lucide="file-plus" style="width:14px;height:14px;"></i>
+              Nueva
+            </button>
+          </div>
+          <div class="assistant-search-row">
+            <input id="assistant-joplin-query" class="settings-input" placeholder="Buscar notas...">
+            <button class="btn-refresh" onclick="searchJoplinFromTab()">
+              <i data-lucide="search" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
+          <div id="assistant-joplin-results" class="assistant-result-list">
+            <div class="assistant-placeholder">Conecta Joplin Web Clipper y busca tus notas aquí.</div>
+          </div>
+        </section>
+      </div>
+    </main>
+

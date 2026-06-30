@@ -1,0 +1,41 @@
+<!-- Tab: Gemini -->
+<main class="main-content hidden integration-screen" data-tool="gemini" id="tab-gemini">
+      <header class="header">
+        <div class="header-titles">
+          <h1>Gemini</h1>
+          <p>Pregunta usando contexto de repos, Jira y notas</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-refresh" onclick="switchTab('configuracion', document.getElementById('nav-config'))">
+            <i data-lucide="settings" style="width:16px;height:16px;"></i>
+            Configurar
+          </button>
+        </div>
+      </header>
+
+      <div class="tool-screen-layout single">
+        <section class="assistant-panel assistant-chat-panel">
+          <div class="assistant-panel-header">
+            <div>
+              <h2>Chat</h2>
+              <p>Usa la información cargada del perfil actual.</p>
+            </div>
+            <button class="btn-refresh" onclick="testGeminiConfig()">
+              <i data-lucide="plug-zap" style="width:14px;height:14px;"></i>
+              Probar
+            </button>
+          </div>
+          <div id="assistant-chat-log" class="assistant-chat-log">
+            <div class="assistant-placeholder">Haz una pregunta sobre tus proyectos, tickets o notas.</div>
+          </div>
+          <div class="assistant-chat-input">
+            <textarea id="assistant-question" class="settings-input" placeholder="Ej. Resume mis tareas activas y dime por dónde empezar"></textarea>
+            <button class="update-btn" onclick="askAssistantFromTab()">
+              <i data-lucide="send" style="width:15px;height:15px;"></i>
+              Preguntar
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+

@@ -1,0 +1,35 @@
+<!-- Tab: KeePass -->
+<main class="main-content hidden integration-screen" data-tool="keepass" id="tab-keepass">
+      <header class="header">
+        <div class="header-titles">
+          <h1>KeePass</h1>
+          <p>Busca entradas y copia contraseñas cuando el proyecto lo requiera</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-refresh" onclick="switchTab('configuracion', document.getElementById('nav-config'))">
+            <i data-lucide="settings" style="width:16px;height:16px;"></i>
+            Configurar
+          </button>
+        </div>
+      </header>
+      <div class="tool-screen-layout single">
+        <section class="assistant-panel">
+          <div class="assistant-panel-header">
+            <div>
+              <h2>KeePass</h2>
+              <p>Busca entradas y copia contraseñas.</p>
+            </div>
+          </div>
+          <div class="assistant-search-row">
+            <input id="assistant-keepass-query" class="settings-input" placeholder="Buscar entrada...">
+            <button class="btn-refresh" onclick="searchKeePassFromTab()">
+              <i data-lucide="key-round" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
+          <div id="assistant-keepass-results" class="assistant-result-list">
+            <div class="assistant-placeholder">La contraseña maestra se pide por sesión y no se guarda.</div>
+          </div>
+        </section>
+      </div>
+    </main>
+

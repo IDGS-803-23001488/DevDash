@@ -1,0 +1,203 @@
+<!-- Settings View -->
+<main class="main-content hidden" id="tab-configuracion">
+      <header class="header">
+        <div>
+          <h1>Configuración</h1>
+          <p>Ajustes de Perfil y Credenciales</p>
+        </div>
+      </header>
+
+      <!-- Navigation Tabs -->
+      <div class="config-tabs">
+        <button class="config-tab-btn active" onclick="switchConfigTab('perfiles')">Perfiles</button>
+        <button class="config-tab-btn" onclick="switchConfigTab('integraciones')">Integraciones</button>
+        <button class="config-tab-btn" onclick="switchConfigTab('proyectos')">Proyectos</button>
+        <button class="config-tab-btn" onclick="switchConfigTab('apariencia')">Apariencia</button>
+      </div>
+
+      <div class="config-tab-content active" id="config-tab-perfiles">
+        <div class="settings-container">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div>
+              <h3 style="margin:0;">Gestión de Perfiles</h3>
+              <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Crea y cambia entre diferentes perfiles de trabajo.</p>
+            </div>
+            <button class="btn-refresh" onclick="createNewProfile()" style="font-size:13px; padding:8px 14px;">
+              <i data-lucide="plus" style="width:14px;height:14px;"></i>
+              Nuevo Perfil
+            </button>
+          </div>
+          <div id="profiles-list" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+            <div style="color:#64748b; font-size:13px; text-align:center; padding:20px;">Cargando perfiles...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-tab-content hidden" id="config-tab-integraciones">
+        <div class="settings-container">
+          <h3>Integración Jira</h3>
+          <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px;">Tus credenciales se guardan localmente.</p>
+          
+          <label>Base URL</label>
+          <input type="text" id="jira-url" class="settings-input" placeholder="ej. https://tudominio.atlassian.net">
+
+          <label>Email</label>
+          <input type="text" id="jira-email" class="settings-input" placeholder="ej. usuario@empresa.com">
+
+          <label>API Token</label>
+          <input type="password" id="jira-token" class="settings-input" placeholder="Pega tu token de Atlassian aquí">
+
+          <label>Project Key</label>
+          <input type="text" id="jira-project-key" class="settings-input" placeholder="ej. KAN">
+
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:20px;">
+            <button class="update-btn" onclick="saveJiraConfig()">Guardar Configuración Jira</button>
+            <button class="btn-refresh" onclick="testJiraConfig()">
+              <i data-lucide="plug-zap" style="width:14px;height:14px;"></i>
+              Probar API
+            </button>
+            <button class="btn-refresh" onclick="importJiraEnv()">
+              <i data-lucide="file-input" style="width:14px;height:14px;"></i>
+              Importar .env
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-container">
+          <h3>IA, Notas y Contraseñas</h3>
+          <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px;">Configura proveedores locales para el buscador global.</p>
+
+          <div class="tool-visibility-settings">
+            <label class="tool-toggle">
+              <input type="checkbox" id="tool-visible-gemini">
+              <span><strong>Mostrar Gemini</strong><small>Chat de IA para este perfil</small></span>
+            </label>
+            <label class="tool-toggle">
+              <input type="checkbox" id="tool-visible-joplin">
+              <span><strong>Mostrar Joplin</strong><small>Notas para este perfil</small></span>
+            </label>
+            <label class="tool-toggle">
+              <input type="checkbox" id="tool-visible-keepass">
+              <span><strong>Mostrar KeePass</strong><small>Contraseñas para este perfil</small></span>
+            </label>
+          </div>
+
+          <div class="integration-grid">
+            <div>
+              <h4>Gemini</h4>
+              <label>API Key</label>
+              <input type="password" id="gemini-api-key" class="settings-input" placeholder="AIza...">
+              <label>Modelo</label>
+              <input type="text" id="gemini-model" class="settings-input" placeholder="gemini-1.5-flash">
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <select id="gemini-model-list" class="settings-input" onchange="useSelectedGeminiModel()">
+                  <option value="">Carga modelos disponibles</option>
+                </select>
+                <button class="btn-refresh" onclick="loadGeminiModels()">
+                  <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <h4>Joplin</h4>
+              <label>Web Clipper URL</label>
+              <input type="text" id="joplin-base-url" class="settings-input" placeholder="http://127.0.0.1:41184">
+              <label>Token</label>
+              <input type="password" id="joplin-token" class="settings-input" placeholder="Token de Joplin Web Clipper">
+            </div>
+
+            <div>
+              <h4>KeePass</h4>
+              <label>Base .kdbx</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="keepass-db-path" class="settings-input" placeholder="Ruta de base KeePass">
+                <button class="btn-refresh" onclick="chooseKeePassDb()"><i data-lucide="folder-open" style="width:14px;height:14px;"></i></button>
+              </div>
+              <label>Key file</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="keepass-key-file" class="settings-input" placeholder="Opcional">
+                <button class="btn-refresh" onclick="chooseKeePassKeyFile()"><i data-lucide="folder-open" style="width:14px;height:14px;"></i></button>
+              </div>
+              <label>Ruta keepassxc-cli</label>
+              <input type="text" id="keepass-cli-path" class="settings-input" placeholder="Opcional si esta en PATH">
+            </div>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:20px;">
+            <button class="update-btn" onclick="saveIntegrationsConfig()">Guardar integraciones</button>
+            <button class="btn-refresh" onclick="testGeminiConfig()"><i data-lucide="sparkles" style="width:14px;height:14px;"></i> Probar Gemini</button>
+            <button class="btn-refresh" onclick="testJoplinIntegration()"><i data-lucide="notebook-text" style="width:14px;height:14px;"></i> Probar Joplin</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-tab-content hidden" id="config-tab-proyectos">
+        <div class="settings-container">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div>
+              <h3 style="margin:0;">Workspaces</h3>
+              <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Agrupa apps, terminales y URLs para abrir todo con un clic.</p>
+            </div>
+            <button class="btn-refresh" onclick="addWorkspace()" style="font-size:13px; padding:8px 14px;">
+              <i data-lucide="plus" style="width:14px;height:14px;"></i>
+              Nuevo workspace
+            </button>
+          </div>
+          <div id="workspaces-config-list" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+            <div style="color:#64748b; font-size:13px; text-align:center; padding:20px;">Cargando workspaces...</div>
+          </div>
+        </div>
+
+        <!-- Editores de Proyectos -->
+        <div class="settings-container">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div>
+              <h3 style="margin:0;">Editores de Proyectos</h3>
+              <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Configura los programas con los que abres tus proyectos.</p>
+            </div>
+            <button class="btn-refresh" onclick="addEditor()" style="font-size:13px; padding:8px 14px;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Agregar editor
+            </button>
+          </div>
+          <div id="editors-list" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+            <div style="color:#64748b; font-size:13px; text-align:center; padding:20px;">Cargando editores...</div>
+          </div>
+        </div>
+
+        <!-- Per-Repo Editor Assignment -->
+        <div class="settings-container">
+          <h3>Editor por Repositorio</h3>
+          <p style="color:var(--text-muted); font-size:14px; margin-bottom:16px;">Elige qué programa abre cada proyecto.</p>
+          <div id="repo-editor-list" style="display:flex; flex-direction:column; gap:12px;">
+            <div style="color:#64748b; font-size:13px; text-align:center; padding:20px;">Cargando...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-tab-content hidden" id="config-tab-apariencia">
+        <div class="settings-container">
+          <h3>Icono de la App</h3>
+          <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px;">Selecciona un PNG, JPG o ICO local y previsualizalo antes de usarlo.</p>
+          <div class="app-icon-settings">
+            <div id="app-icon-preview" class="app-icon-preview">
+              <i data-lucide="app-window" style="width:32px;height:32px;"></i>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div id="app-icon-path" class="repo-path">Sin icono personalizado</div>
+              <div style="display:flex; gap:8px; margin-top:10px;">
+                <button class="btn-refresh" onclick="chooseAppIcon()">
+                  <i data-lucide="image-plus" style="width:14px;height:14px;"></i>
+                  Elegir icono
+                </button>
+                <button class="btn-refresh danger" onclick="clearAppIcon()">
+                  <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i>
+                  Restaurar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>

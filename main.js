@@ -4,6 +4,9 @@ const fs = require('fs');
 const configManager = require('./configManager');
 const gitService = require('./gitService');
 const jiraService = require('./jiraService');
+const aiService = require('./aiService');
+const joplinService = require('./joplinService');
+const keepassService = require('./keepassService');
 
 let mainWindow;
 let tray = null;
@@ -105,7 +108,7 @@ function setSpotlightMode() {
   currentMode = 'spotlight';
   if (mainWindow) {
     if (mainWindow.isMaximized()) mainWindow.unmaximize();
-    mainWindow.setSize(600, 350);
+    mainWindow.setSize(780, 560);
     mainWindow.center();
     mainWindow.webContents.send('set-view-mode', 'spotlight');
     mainWindow.show();
@@ -206,6 +209,12 @@ ipcMain.handle('select-file', async (e, options = {}) => {
   return result.filePaths[0];
 });
 
+ipcMain.handle('select-save-file', async (e, options = {}) => {
+  const result = await dialog.showSaveDialog(mainWindow, options);
+  if (result.canceled) return null;
+  return result.filePath;
+});
+
 ipcMain.handle('import-jira-env', (e, envPath) => {
   try {
     if (!envPath || !fs.existsSync(envPath)) {
@@ -236,10 +245,15 @@ ipcMain.handle('import-jira-env', (e, envPath) => {
   }
 });
 
-ipcMain.handle('scan-repositories', async (event) => {
-  const os = require('os');
-  const userHome = os.homedir();
-  
+ipcMain.handle('select-directories', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory', 'multiSelections']
+  });
+  return result.filePaths;
+});
+
+ipcMain.handle('scan-repositories', async (event, config) => {
+  // config: { paths: string[], searchSubfolders: boolean, excludes: string[] }
   let scannedCount = 0;
   
   const onProgress = (repoPath) => {
@@ -249,8 +263,23 @@ ipcMain.handle('scan-repositories', async (event) => {
     }
   };
 
-  const repos = await gitService.scanForGitRepos(userHome, onProgress);
-  return repos;
+  const excludeSet = new Set((config?.excludes || []).map(e => e.toLowerCase().trim()));
+  const maxDepth = config?.searchSubfolders ? 6 : 1;
+  let allRepos = [];
+
+  const paths = (config && config.paths && config.paths.length > 0) ? config.paths : [require('os').homedir()];
+
+  for (const dir of paths) {
+    const repos = await gitService.scanForGitRepos(dir, onProgress, maxDepth, 0, excludeSet);
+    allRepos = allRepos.concat(repos);
+  }
+  
+  // Deduplicate
+  return [...new Set(allRepos)];
+});
+
+ipcMain.handle('clone-repository', async (event, url, targetPath) => {
+  return await gitService.cloneRepo(url, targetPath);
 });
 
 ipcMain.handle('get-profiles', () => {
@@ -263,6 +292,15 @@ ipcMain.handle('get-config', () => {
 
 ipcMain.handle('save-config', (e, config) => {
   configManager.saveConfig(config);
+});
+
+ipcMain.handle('get-integrations', () => {
+  return configManager.getIntegrations();
+});
+
+ipcMain.handle('save-integrations', (e, integrations) => {
+  configManager.saveIntegrations(integrations || {});
+  return { success: true };
 });
 
 ipcMain.handle('git-status', async (e, repoPath) => {
@@ -356,6 +394,53 @@ ipcMain.handle('jira-add-comment', async (e, config, issueKey, text) => {
   return await jiraService.addComment(config, issueKey, text);
 });
 
+ipcMain.handle('jira-get-users', async (e, config) => {
+  return await jiraService.getAssignableUsers(config);
+});
+
+ipcMain.handle('jira-create-issue', async (e, config, issueData) => {
+  return await jiraService.createIssue(config, issueData);
+});
+
+// ─── AI / Notes / Passwords ─────────────────────────────────────────────────
+ipcMain.handle('ai-ask', async (e, question, context) => {
+  const integrations = configManager.getIntegrations();
+  return await aiService.askGemini(integrations.gemini, question, context || {});
+});
+
+ipcMain.handle('ai-list-models', async (e, config) => {
+  const integrations = configManager.getIntegrations();
+  return await aiService.listModels(config || integrations.gemini);
+});
+
+ipcMain.handle('joplin-test', async (e, config) => {
+  return await joplinService.testConnection(config || configManager.getIntegrations().joplin);
+});
+
+ipcMain.handle('joplin-search', async (e, query) => {
+  return await joplinService.searchNotes(configManager.getIntegrations().joplin, query);
+});
+
+ipcMain.handle('joplin-get-note', async (e, noteId) => {
+  return await joplinService.getNote(configManager.getIntegrations().joplin, noteId);
+});
+
+ipcMain.handle('joplin-save-note', async (e, note) => {
+  return await joplinService.saveNote(configManager.getIntegrations().joplin, note);
+});
+
+ipcMain.handle('joplin-delete-note', async (e, noteId) => {
+  return await joplinService.deleteNote(configManager.getIntegrations().joplin, noteId);
+});
+
+ipcMain.handle('keepass-search', async (e, query, masterPassword) => {
+  return await keepassService.searchEntries(configManager.getIntegrations().keepass, query, masterPassword);
+});
+
+ipcMain.handle('keepass-get-password', async (e, entryPath, masterPassword) => {
+  return await keepassService.getEntryPassword(configManager.getIntegrations().keepass, entryPath, masterPassword);
+});
+
 // ─── App Icon ────────────────────────────────────────────────────────────────
 ipcMain.handle('get-app-icon', () => {
   return configManager.getAppIconPath();
@@ -388,6 +473,18 @@ ipcMain.handle('open-workspace', async (e, workspace) => {
       }
       await shell.openExternal(targetUrl);
       results.push({ success: true, name: item.name });
+    } else if (item.type === 'file') {
+      const targetPath = item.command || '';
+      if (!targetPath) {
+        results.push({ success: false, name: item.name, error: 'Ruta de archivo vacia.' });
+        continue;
+      }
+      const errorMsg = await shell.openPath(targetPath);
+      if (errorMsg) {
+        results.push({ success: false, name: item.name, error: errorMsg });
+      } else {
+        results.push({ success: true, name: item.name });
+      }
     } else {
       const res = await gitService.openWorkspaceAction(item);
       results.push({ ...res, name: item.name });

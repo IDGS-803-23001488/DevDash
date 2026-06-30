@@ -1,0 +1,29 @@
+<!-- Tab: Proyectos Git -->
+<main class="main-content hidden" id="tab-proyectos">
+      <header class="header">
+        <div class="header-titles">
+          <h1>Proyectos Git</h1>
+          <p>Gestiona todos tus repositorios sincronizados</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-refresh" onclick="addRepo()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Agregar Repositorio
+          </button>
+        </div>
+      </header>
+      <div style="display: flex; gap: 24px; padding-top: 10px; max-width:1100px;">
+        <div id="git-tab-list" class="list-container" style="flex: 2; padding:0; gap:12px;">
+          <div style="padding:20px; color:#64748b; text-align:center;">Cargando...</div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+          <div class="card" style="padding: 16px;">
+            <h3 style="font-size: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">Actividad por Proyecto</h3>
+            <div id="project-charts-container-2">
+              <div style="color:var(--text-muted); font-size:12px;">Cargando analíticas...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+

@@ -34,7 +34,7 @@
   </div>
 
   <!-- Modal Overlay -->
-  <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal(event)">
+  <div id="modal-overlay" class="modal-overlay hidden">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2 id="modal-title">Título del Modal</h2>
@@ -47,29 +47,246 @@
   </div>
 
   <!-- Modal Escáner (Add Repo) -->
-  <div id="modal-scanner" class="modal-overlay hidden" onclick="document.getElementById('modal-scanner').classList.add('hidden')">
-    <div class="modal-content" onclick="event.stopPropagation()">
+  <div id="modal-scanner" class="modal-overlay hidden">
+    <div class="modal-content scanner-modal" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h2>Escanear Repositorios</h2>
-        <button class="btn-close-modal" onclick="document.getElementById('modal-scanner').classList.add('hidden')">✕</button>
+        <div>
+          <h2>Agregar Repositorios</h2>
+          <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">Escanea y guarda nuevos repositorios en tu lista, o descarga uno remoto.</p>
+        </div>
+        <button class="btn-close-modal" onclick="closeScannerModal()">✕</button>
       </div>
-      <div class="modal-body" style="padding: 20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <h3 style="font-size:14px; margin:0;">Tus Repositorios Actuales</h3>
-        </div>
-        <div id="scanner-prev-list" style="background:var(--bg-panel); border:1px solid var(--border-light); border-radius:8px; padding:12px; font-size:13px; color:var(--text-muted); max-height:150px; overflow-y:auto; margin-bottom:20px;"></div>
+      
+      <div class="modal-body scanner-body">
+        <div class="scanner-layout">
+          <!-- Columna Izquierda: Opciones -->
+          <div class="scanner-sidebar">
+            <h3 class="scanner-step-title">1. Seleccionar método</h3>
+            <div class="scanner-method active" id="method-fs" onclick="setScannerMethod('fs')">
+              <i data-lucide="folder-search"></i>
+              <div>
+                <strong>Desde el sistema de archivos</strong>
+                <p>Busca repositorios Git en carpetas locales.</p>
+              </div>
+              <i data-lucide="check-circle" class="method-check"></i>
+            </div>
+            <div class="scanner-method" id="method-url" onclick="setScannerMethod('url')">
+              <i data-lucide="link"></i>
+              <div>
+                <strong>Desde una URL</strong>
+                <p>Agrega un repositorio remoto por su URL.</p>
+              </div>
+              <i data-lucide="check-circle" class="method-check"></i>
+            </div>
+            <div class="scanner-tip">
+              <i data-lucide="lightbulb" style="color:var(--accent); width:16px; height:16px;"></i>
+              <p>Tip<br>Puedes seleccionar múltiples carpetas a la vez para buscar repositorios.</p>
+            </div>
+          </div>
+          
+          <!-- Columna Derecha: Configuración -->
+          <div class="scanner-content">
+            <!-- Vista File System -->
+            <div id="scanner-view-fs">
+              <h3 class="scanner-step-title">2. Seleccionar carpetas a escanear</h3>
+              <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">Elige las carpetas donde buscar repositorios Git.</p>
+              
+              <div class="scanner-path-input-group">
+                <div class="scanner-path-display" id="scanner-path-display">
+                  <i data-lucide="folder"></i> Selecciona carpetas...
+                </div>
+                <button class="btn-outline" onclick="selectScannerPaths()">Explorar</button>
+              </div>
+              <div id="scanner-pills" class="scanner-pills-container"></div>
+              
+              <div class="scanner-checkbox-group" style="margin-top:16px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                  <input type="checkbox" id="scanner-subfolders" checked>
+                  <strong>Buscar en subcarpetas</strong>
+                </label>
+                <p style="color:var(--text-muted); font-size:12px; margin-left:24px;">Incluye todas las subcarpetas en la búsqueda.</p>
+              </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <h3 style="font-size:14px; margin:0;">Nuevos Encontrados</h3>
-          <div id="scanner-spinner" style="display:none; color:var(--accent);"><i data-lucide="loader" class="spin-anim" style="width:16px;height:16px;"></i> Buscando...</div>
+              <div class="scanner-checkbox-group" style="margin-top:16px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                  <input type="checkbox" id="scanner-use-exclude" onchange="toggleExcludeInput()">
+                  <strong>Excluir carpetas</strong>
+                </label>
+                <p style="color:var(--text-muted); font-size:12px; margin-left:24px;">Especifica carpetas que no deseas incluir.</p>
+                <div id="scanner-exclude-container" class="hidden" style="margin-left:24px; margin-top:8px;">
+                  <input type="text" id="scanner-excludes" class="settings-input" placeholder="Ej: node_modules, .git, build" value="node_modules, build, dist, .cache, temp, tmp">
+                  <p style="color:var(--text-muted); font-size:11px; margin-top:4px;">Separa con comas las carpetas a excluir</p>
+                </div>
+              </div>
+
+              <div class="scanner-summary-box">
+                <i data-lucide="search" style="width:16px;height:16px;color:var(--text-muted);"></i>
+                <div style="flex:1;">
+                  <div style="font-size:12px; font-weight:600;">Se buscarán repositorios Git en:</div>
+                  <div id="scanner-summary-paths" style="font-size:12px; color:var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">Ninguna carpeta seleccionada</div>
+                </div>
+                <div style="font-size:12px; color:var(--text-muted);" id="scanner-summary-depth">Profundidad: ∞</div>
+              </div>
+              
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; margin-bottom:8px;">
+                <h3 class="scanner-step-title" style="margin:0;">3. Vista previa</h3>
+                <div id="scanner-spinner" style="display:none; color:var(--accent); font-size:13px;"><i data-lucide="loader" class="spin-anim" style="width:14px;height:14px;vertical-align:middle;"></i> Buscando...</div>
+              </div>
+              <div id="scanner-new-list" class="scanner-preview-list">
+                <div style="color:var(--text-muted); text-align:center; margin-top:20px;">Esperando escaneo...</div>
+              </div>
+            </div>
+
+            <!-- Vista URL -->
+            <div id="scanner-view-url" class="hidden">
+              <h3 class="scanner-step-title">2. Clonar repositorio remoto</h3>
+              <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px;">Ingresa la URL del repositorio Git para clonarlo localmente.</p>
+              
+              <div style="margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">URL del repositorio</label>
+                <input type="text" id="scanner-clone-url" class="settings-input" placeholder="https://github.com/usuario/repo.git">
+              </div>
+              
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Carpeta de destino</label>
+                <div class="scanner-path-input-group">
+                  <div class="scanner-path-display" id="scanner-clone-dest-display">
+                    <i data-lucide="folder"></i> Selecciona el destino...
+                  </div>
+                  <button class="btn-outline" onclick="selectCloneDest()">Explorar</button>
+                </div>
+              </div>
+              
+              <div id="scanner-clone-spinner" style="display:none; color:var(--accent); font-size:13px; margin-top:16px;">
+                <i data-lucide="loader" class="spin-anim" style="width:14px;height:14px;vertical-align:middle;"></i> Clonando repositorio, por favor espera...
+              </div>
+              <div id="scanner-clone-result" style="margin-top:16px; font-size:13px;"></div>
+            </div>
+          </div>
         </div>
-        <div id="scanner-new-list" style="background:var(--bg-panel); border:1px solid var(--border-light); border-radius:8px; padding:12px; font-size:13px; color:var(--text-main); min-height:100px; max-height:200px; overflow-y:auto;">
-          Esperando escaneo...
+      </div>
+      
+      <div class="modal-footer" style="padding:16px 20px; border-top:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:4px;">
+          <i data-lucide="lock" style="width:12px;height:12px;"></i> No se guardará nada aún
+        </div>
+        <div style="display:flex; gap:12px;">
+          <button onclick="closeScannerModal()" class="btn-outline" style="border:none;">Cancelar</button>
+          <button id="scanner-save-btn" onclick="runScannerOrClone()" class="update-btn" style="background:var(--accent); color:var(--bg-main);">
+            <i data-lucide="search" style="width:16px;height:16px;margin-right:6px;"></i> <span id="scanner-btn-text">Escanear y agregar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-create-jira" class="modal-overlay hidden">
+    <div class="modal-content" onclick="event.stopPropagation()" style="width:500px; max-width:90vw;">
+      <div class="modal-header">
+        <h2>Crear Nuevo Ticket Jira</h2>
+        <button class="btn-close-modal" onclick="closeCreateJiraModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; display:flex; flex-direction:column; gap:16px;">
+        <div>
+          <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Tipo de Ticket</label>
+          <select id="jira-create-type" class="settings-input">
+            <option value="Task">Tarea (Task)</option>
+            <option value="Bug">Error (Bug)</option>
+            <option value="Story">Historia (Story)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Resumen</label>
+          <input type="text" id="jira-create-summary" class="settings-input" placeholder="Ej. Implementar login">
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Descripción</label>
+          <textarea id="jira-create-description" class="settings-input" rows="4" style="resize:vertical;" placeholder="Detalles del ticket..."></textarea>
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px;">Asignar a</label>
+          <select id="jira-create-assignee" class="settings-input">
+            <option value="">(Sin asignar)</option>
+            <!-- Llenado dinámicamente -->
+          </select>
         </div>
       </div>
       <div class="modal-footer" style="padding:16px 20px; border-top:1px solid var(--border-light); display:flex; justify-content:flex-end; gap:12px;">
-        <button onclick="document.getElementById('modal-scanner').classList.add('hidden')" style="padding:8px 16px; background:none; border:none; color:var(--text-muted); cursor:pointer;">Cancelar</button>
-        <button id="scanner-save-btn" onclick="saveScannedRepos()" class="update-btn" disabled style="opacity:0.5; cursor:not-allowed;">Guardar Nuevos</button>
+        <button onclick="closeCreateJiraModal()" style="padding:8px 16px; background:none; border:none; color:var(--text-muted); cursor:pointer;">Cancelar</button>
+        <button id="jira-create-btn" onclick="submitNewJiraIssue()" class="update-btn">Crear Ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configurar Workspace -->
+  <div id="modal-workspace-config" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 750px; border-radius: 12px; overflow: hidden; background: #ffffff;" onclick="event.stopPropagation()">
+      <div style="padding: 24px; display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <div style="width: 48px; height: 48px; border-radius: 12px; background: #e8f5e9; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="layout-grid" style="color: #2e7d32; width: 24px; height: 24px;"></i>
+          </div>
+          <div>
+            <h2 style="margin: 0; font-size: 20px; color: #111827;">Configurar workspace</h2>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280;">Organiza y personaliza tu workspace</p>
+          </div>
+        </div>
+        <button onclick="closeWorkspaceModal()" style="background: none; border: none; cursor: pointer; color: #6b7280; padding: 4px;">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+      
+      <div style="border-top: 1px solid #e5e7eb;"></div>
+      
+      <div id="workspace-config-body" style="padding: 24px; max-height: calc(90vh - 160px); overflow-y: auto;">
+        <!-- Contenido dinámico inyectado por renderer.js -->
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-workspace-add-action" class="modal-overlay hidden" style="z-index: 10001;">
+    <div class="modal-content" style="max-width: 500px; border-radius: 12px; background: #ffffff;" onclick="event.stopPropagation()">
+      <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb;">
+        <h3 style="margin: 0; font-size: 16px; color: #111827;">Agregar Acción</h3>
+        <button onclick="closeWorkspaceAddActionModal()" style="background: none; border: none; cursor: pointer; color: #6b7280; padding: 4px;">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+      <div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#374151;">Tipo de Acción</label>
+          <select id="ws-add-type" class="settings-input" style="width:100%; border-radius:8px; padding:10px; border:1px solid #e5e7eb; outline:none; font-size:13px;" onchange="updateWorkspaceAddActionForm()">
+            <option value="app">Aplicación (App)</option>
+            <option value="terminal">Comando (Terminal)</option>
+            <option value="url">Enlace (URL)</option>
+            <option value="file">Archivo/Doc</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#374151;">Nombre (Opcional)</label>
+          <input type="text" id="ws-add-name" class="settings-input" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; outline:none;" placeholder="Ej. Servidor local">
+        </div>
+        <div>
+          <label id="ws-add-command-label" style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#374151;">Comando / Ruta</label>
+          <div style="position:relative;">
+            <input type="text" id="ws-add-command" class="settings-input" style="width:100%; box-sizing:border-box; padding:10px 36px 10px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; outline:none;" placeholder="Ruta o comando">
+            <button id="ws-add-browse-btn" onclick="browseWorkspaceAddAction()" style="position:absolute; right:4px; top:50%; transform:translateY(-50%); background:none; border:none; color:#6b7280; cursor:pointer; padding:4px; display:flex; align-items:center;">
+              <i id="ws-add-browse-icon" data-lucide="folder-open" style="width:16px;height:16px;"></i>
+            </button>
+          </div>
+        </div>
+        <div id="ws-add-args-container">
+          <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#374151;">Argumentos (Opcional)</label>
+          <input type="text" id="ws-add-args" class="settings-input" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; outline:none;" placeholder="--port 3000">
+        </div>
+        <div id="ws-add-cwd-container">
+          <label style="display:block; margin-bottom:6px; font-weight:600; font-size:13px; color:#374151;">Carpeta de Trabajo (Opcional)</label>
+          <input type="text" id="ws-add-cwd" class="settings-input" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; outline:none;" placeholder="C:\Proyecto">
+        </div>
+      </div>
+      <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px;">
+        <button onclick="closeWorkspaceAddActionModal()" style="border:1px solid #e5e7eb; background:#fff; padding:8px 16px; border-radius:8px; color:#374151; font-weight:600; cursor:pointer; font-size:13px;">Cancelar</button>
+        <button onclick="submitWorkspaceAddAction()" style="background:#10b981; border:none; padding:8px 16px; border-radius:8px; color:#fff; font-weight:600; cursor:pointer; font-size:13px;">Agregar Acción</button>
       </div>
     </div>
   </div>
@@ -103,6 +320,18 @@
         <a href="#" class="nav-item" onclick="switchTab('workspaces', this)" title="Workspaces">
           <i data-lucide="rocket" style="flex-shrink:0;"></i>
           <span class="nav-text">Workspaces</span>
+        </a>
+        <a href="#" class="nav-item integration-nav" data-tool="gemini" onclick="switchTab('gemini', this)" title="Gemini">
+          <i data-lucide="sparkles" style="flex-shrink:0;"></i>
+          <span class="nav-text">Gemini</span>
+        </a>
+        <a href="#" class="nav-item integration-nav" data-tool="joplin" onclick="switchTab('joplin', this)" title="Joplin">
+          <i data-lucide="notebook-text" style="flex-shrink:0;"></i>
+          <span class="nav-text">Joplin</span>
+        </a>
+        <a href="#" class="nav-item integration-nav" data-tool="keepass" onclick="switchTab('keepass', this)" title="KeePass">
+          <i data-lucide="key-round" style="flex-shrink:0;"></i>
+          <span class="nav-text">KeePass</span>
         </a>
         <a href="#" class="nav-item" onclick="switchTab('actividad', this)" title="Actividad Reciente">
           <i data-lucide="activity" style="flex-shrink:0;"></i>
@@ -140,383 +369,22 @@
         </div>
       </div>
     </aside>
-
-    <!-- Main Content -->
-    <main class="main-content" id="tab-resumen">
-      <header class="header">
-        <div class="header-titles">
-          <h1>Resumen</h1>
-          <p>Panorama general de tus proyectos y tareas</p>
-        </div>
-        <div class="header-actions">
-          <div class="clock-widget">
-            <i data-lucide="sun" style="width:24px; height:24px; color:#64748b;"></i>
-            <div class="clock-text">
-              <div class="time" id="clock-time">10:42:35</div>
-              <div class="date" id="clock-date">Cargando fecha...</div>
-            </div>
-          </div>
-          <button class="btn-refresh" onclick="init()">
-            <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i>
-            Actualizar
-          </button>
-        </div>
-      </header>
-
-      <!-- Estadísticas KPI -->
-      <div class="stats-grid">
-        <div class="stat-card stat-clickable" onclick="switchTabByName('proyectos')" title="Ver repositorios">
-          <div class="stat-icon icon-green">
-            <i data-lucide="git-branch" style="width:20px; height:20px;"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-number" id="metric-repos">0</span>
-            <span class="stat-label">Repositorios sincronizados</span>
-          </div>
-        </div>
-        <div class="stat-card stat-clickable" onclick="switchTabByName('proyectos')" title="Ver repos con cambios">
-          <div class="stat-icon icon-blue">
-            <i data-lucide="file-edit" style="width:20px; height:20px;"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-number" id="metric-dirty">0</span>
-            <span class="stat-label">Repositorios con cambios</span>
-          </div>
-        </div>
-        <div class="stat-card stat-clickable" onclick="switchTabByName('jira')" title="Ver tareas activas">
-          <div class="stat-icon icon-orange">
-            <i data-lucide="clock" style="width:20px; height:20px;"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-number" id="metric-tasks-active">0</span>
-            <span class="stat-label">Tareas activas en progreso</span>
-          </div>
-        </div>
-        <div class="stat-card stat-clickable" onclick="switchTabByName('jira')" title="Ver todas las tareas">
-          <div class="stat-icon icon-purple">
-            <i data-lucide="check-circle" style="width:20px; height:20px;"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-number" id="metric-tasks-total">0</span>
-            <span class="stat-label">Tareas Totales (Cargadas)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Contenido Principal: Gráficos -->
-      <div class="dashboard-charts" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 10px;">
-        
-        <!-- Chart 1: Jira (Donut) -->
-        <section class="card">
-          <div class="card-header">
-            <h2 class="card-title">
-              <i data-lucide="check-square" style="width:20px; height:20px;"></i>
-              Estado de Tareas
-            </h2>
-          </div>
-          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 20px 0; height:220px;">
-            <div class="donut-chart" id="jira-donut" style="--p-todo: 0%; --p-prog: 0%; --p-done: 0%;">
-              <div class="donut-inner">
-                <span id="jira-total-text" style="font-size:24px; font-weight:bold; color:var(--text-main);">0</span>
-                <span style="font-size:12px; color:var(--text-muted);">Tareas</span>
-              </div>
-            </div>
-            <div style="display:flex; gap:16px; margin-top:20px; font-size:13px;">
-              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span> Por Hacer (<span id="j-todo">0</span>)</div>
-              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span> En Progreso (<span id="j-prog">0</span>)</div>
-              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#10b981;"></span> Listo (<span id="j-done">0</span>)</div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Chart 2: Git Status (Horizontal Bars) -->
-        <section class="card">
-          <div class="card-header">
-            <h2 class="card-title">
-              <i data-lucide="folder-git-2" style="width:20px; height:20px;"></i>
-              Salud de Repositorios
-            </h2>
-          </div>
-          <div style="display:flex; flex-direction:column; justify-content:center; gap: 20px; padding: 20px; height:220px;">
-            <div class="bar-horizontal-wrap">
-              <div class="bar-label">
-                <span>Limpios (Sincronizados)</span>
-                <span id="git-clean-val">0</span>
-              </div>
-              <div class="bar-track">
-                <div class="bar-fill" id="git-clean-bar" style="width:0%; background: linear-gradient(90deg, #10b981, #34d399);"></div>
-              </div>
-            </div>
-            <div class="bar-horizontal-wrap">
-              <div class="bar-label">
-                <span>Con Cambios Locales</span>
-                <span id="git-dirty-val">0</span>
-              </div>
-              <div class="bar-track">
-                <div class="bar-fill" id="git-dirty-bar" style="width:0%; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
-              </div>
-            </div>
-            <div class="bar-horizontal-wrap">
-              <div class="bar-label">
-                <span>Desactualizados (Ahead/Behind)</span>
-                <span id="git-sync-val">0</span>
-              </div>
-              <div class="bar-track">
-                <div class="bar-fill" id="git-sync-bar" style="width:0%; background: linear-gradient(90deg, #ef4444, #f87171);"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Chart 3: Actividad (Vertical Bars) -->
-        <section class="card" style="grid-column: span 2;">
-          <div class="card-header">
-            <h2 class="card-title">
-              <i data-lucide="activity" style="width:20px; height:20px;"></i>
-              Actividad de Commits (Últimos 7 días)
-            </h2>
-          </div>
-          <div class="bar-chart-vertical" id="activity-chart" style="height: 200px; padding: 20px; display:flex; align-items:flex-end; gap:20px; justify-content:space-around;">
-            <div style="color:var(--text-muted); font-size:13px;">Cargando actividad...</div>
-          </div>
-        </section>
-
-      </div>
-
-    </main>
-
-    <!-- Tab: Proyectos Git -->
-    <main class="main-content hidden" id="tab-proyectos">
-      <header class="header">
-        <div class="header-titles">
-          <h1>Proyectos Git</h1>
-          <p>Gestiona todos tus repositorios sincronizados</p>
-        </div>
-        <div class="header-actions">
-          <button class="btn-refresh" onclick="addRepo()">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Agregar Repositorio
-          </button>
-        </div>
-      </header>
-      <div style="display: flex; gap: 24px; padding-top: 10px; max-width:1100px;">
-        <div id="git-tab-list" class="list-container" style="flex: 2; padding:0; gap:12px;">
-          <div style="padding:20px; color:#64748b; text-align:center;">Cargando...</div>
-        </div>
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
-          <div class="card" style="padding: 16px;">
-            <h3 style="font-size: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">Actividad por Proyecto</h3>
-            <div id="project-charts-container-2">
-              <div style="color:var(--text-muted); font-size:12px;">Cargando analíticas...</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- Tab: Tareas Jira -->
-    <main class="main-content hidden" id="tab-jira">
-      <header class="header">
-        <div class="header-titles">
-          <h1>Tareas Jira</h1>
-          <p>Todas tus tareas del equipo</p>
-        </div>
-        <div class="header-actions">
-          <div class="tabs-header" style="border:none; padding:0; margin:0;">
-            <div class="tab-item active" onclick="filterJira('mis', this)">Mis tareas</div>
-            <div class="tab-item" onclick="filterJira('todas', this)">Todas</div>
-          </div>
-        </div>
-      </header>
-      <div id="jira-tab-list" class="list-container" style="padding:0; gap:0;">
-        <div style="padding:20px; color:#64748b; text-align:center;">Cargando...</div>
-      </div>
-    </main>
-
-    <!-- Tab: Workspaces -->
-    <main class="main-content hidden" id="tab-workspaces">
-      <header class="header">
-        <div class="header-titles">
-          <h1>Workspaces</h1>
-          <p>Abre apps, terminales y enlaces de trabajo en conjunto</p>
-        </div>
-        <div class="header-actions">
-          <button class="btn-refresh" onclick="switchTab('configuracion', document.getElementById('nav-config'))">
-            <i data-lucide="settings" style="width:16px;height:16px;"></i>
-            Configurar
-          </button>
-        </div>
-      </header>
-      <div id="workspace-list" class="workspace-grid">
-        <div style="padding:20px; color:#64748b; text-align:center;">Cargando...</div>
-      </div>
-    </main>
-
-    <!-- Tab: Actividad -->
-    <main class="main-content hidden" id="tab-actividad">
-      <header class="header">
-        <div class="header-titles">
-          <h1>Actividad Reciente</h1>
-          <p>Historial de commits en todos tus repositorios</p>
-        </div>
-      </header>
-      <div id="activity-tab-list" class="list-container" style="padding:0; gap:8px;">
-        <div style="padding:20px; color:#64748b; text-align:center;">Cargando...</div>
-      </div>
-    </main>
-
-    <!-- Tab: Calendario -->
-    <main class="main-content hidden" id="tab-calendario">
-      <header class="header">
-        <div class="header-titles">
-          <h1>Análisis y Calendario</h1>
-          <p>Actividad de commits por fecha y métricas de autores</p>
-        </div>
-      </header>
-      <div style="display: flex; gap: 24px; padding-top: 10px;">
-        <div id="calendar-container" style="flex: 2;"></div>
-        <div id="analytics-container" style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
-          <!-- Top Autores Graph -->
-          <div class="card" style="padding: 16px;">
-            <h3 style="font-size: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">Top Contribuidores</h3>
-            <div id="author-charts-container">
-              <div style="color:var(--text-muted); font-size:12px;">Cargando analíticas...</div>
-            </div>
-          </div>
-          <!-- Top Proyectos Graph -->
-          <div class="card" style="padding: 16px;">
-            <h3 style="font-size: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">Actividad por Proyecto</h3>
-            <div id="project-charts-container">
-              <div style="color:var(--text-muted); font-size:12px;">Cargando analíticas...</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- Settings View -->
-    <main class="main-content hidden" id="tab-configuracion">
-      <header class="header">
-        <div>
-          <h1>Configuración</h1>
-          <p>Ajustes de Perfil y Credenciales</p>
-        </div>
-      </header>
-
-      <div class="settings-container" style="margin-bottom: 24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div>
-            <h3 style="margin:0;">Gestión de Perfiles</h3>
-            <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Crea y cambia entre diferentes perfiles de trabajo.</p>
-          </div>
-          <button class="btn-refresh" onclick="createNewProfile()" style="font-size:13px; padding:8px 14px;">
-            <i data-lucide="plus" style="width:14px;height:14px;"></i>
-            Nuevo Perfil
-          </button>
-        </div>
-
-        <div id="profiles-list" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
-          <div style="color:#64748b; font-size:13px; text-align:center; padding:20px;">Cargando perfiles...</div>
-        </div>
-      </div>
-
-      <div class="settings-container">
-        <h3>Integración Jira</h3>
-        <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px;">Tus credenciales se guardan localmente.</p>
-        
-        <label>Base URL</label>
-        <input type="text" id="jira-url" class="settings-input" placeholder="ej. https://tudominio.atlassian.net">
-
-        <label>Email</label>
-        <input type="text" id="jira-email" class="settings-input" placeholder="ej. usuario@empresa.com">
-
-        <label>API Token</label>
-        <input type="password" id="jira-token" class="settings-input" placeholder="Pega tu token de Atlassian aquí">
-
-        <label>Project Key</label>
-        <input type="text" id="jira-project-key" class="settings-input" placeholder="ej. KAN">
-
-        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:20px;">
-          <button class="update-btn" onclick="saveJiraConfig()">Guardar Configuración Jira</button>
-          <button class="btn-refresh" onclick="testJiraConfig()">
-            <i data-lucide="plug-zap" style="width:14px;height:14px;"></i>
-            Probar API
-          </button>
-          <button class="btn-refresh" onclick="importJiraEnv()">
-            <i data-lucide="file-input" style="width:14px;height:14px;"></i>
-            Importar .env
-          </button>
-        </div>
-      </div>
-
-      <div class="settings-container" style="margin-top: 24px;">
-        <h3>Icono de la App</h3>
-        <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px;">Selecciona un PNG, JPG o ICO local y previsualizalo antes de usarlo.</p>
-        <div class="app-icon-settings">
-          <div id="app-icon-preview" class="app-icon-preview">
-            <i data-lucide="app-window" style="width:32px;height:32px;"></i>
-          </div>
-          <div style="flex:1; min-width:0;">
-            <div id="app-icon-path" class="repo-path">Sin icono personalizado</div>
-            <div style="display:flex; gap:8px; margin-top:10px;">
-              <button class="btn-refresh" onclick="chooseAppIcon()">
-                <i data-lucide="image-plus" style="width:14px;height:14px;"></i>
-                Elegir icono
-              </button>
-              <button class="btn-refresh danger" onclick="clearAppIcon()">
-                <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i>
-                Restaurar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="settings-container" style="margin-top: 24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div>
-            <h3 style="margin:0;">Workspaces</h3>
-            <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Agrupa apps, terminales y URLs para abrir todo con un clic.</p>
-          </div>
-          <button class="btn-refresh" onclick="addWorkspace()" style="font-size:13px; padding:8px 14px;">
-            <i data-lucide="plus" style="width:14px;height:14px;"></i>
-            Nuevo workspace
-          </button>
-        </div>
-        <div id="workspaces-config-list" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
-          <div style="color:#64748b; font-size:13px; text-align:center; padding:20px;">Cargando workspaces...</div>
-        </div>
-      </div>
-
-      <!-- Editores de Proyectos -->
-      <div class="settings-container" style="margin-top: 24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div>
-            <h3 style="margin:0;">Editores de Proyectos</h3>
-            <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Configura los programas con los que abres tus proyectos.</p>
-          </div>
-          <button class="btn-refresh" onclick="addEditor()" style="font-size:13px; padding:8px 14px;">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Agregar editor
-          </button>
-        </div>
-
-        <div id="editors-list" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
-          <div style="color:#64748b; font-size:13px; text-align:center; padding:20px;">Cargando editores...</div>
-        </div>
-      </div>
-
-      <!-- Per-Repo Editor Assignment -->
-      <div class="settings-container" style="margin-top: 24px;">
-        <h3>Editor por Repositorio</h3>
-        <p style="color:var(--text-muted); font-size:14px; margin-bottom:16px;">Elige qué programa abre cada proyecto.</p>
-        <div id="repo-editor-list" style="display:flex; flex-direction:column; gap:12px;">
-          <div style="color:#64748b; font-size:13px; text-align:center; padding:20px;">Cargando...</div>
-        </div>
-      </div>
-    </main>
+    <div id="views-root"></div>
+    <script>
+      (() => {
+        const fs = require('fs');
+        const path = require('path');
+        const views = ['resumen', 'proyectos', 'jira', 'workspaces', 'gemini', 'joplin', 'keepass', 'actividad', 'calendario', 'configuracion'];
+        const root = document.getElementById('views-root');
+        for (const view of views) {
+          const file = path.join(__dirname, 'views', `${view}.html`);
+          root.insertAdjacentHTML('beforeend', fs.readFileSync(file, 'utf8'));
+        }
+      })();
+    </script>
   </div>
 
   <script src="renderer.js"></script>
 </body>
 </html>
+

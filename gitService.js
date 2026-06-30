@@ -230,7 +230,7 @@ const IGNORE_DIRS = new Set([
   '.cache', 'temp', 'tmp', '$recycle.bin', 'system volume information'
 ]);
 
-async function scanForGitRepos(dir, onProgress, maxDepth = 6, currentDepth = 0) {
+async function scanForGitRepos(dir, onProgress, maxDepth = 6, currentDepth = 0, excludes = new Set()) {
   let repos = [];
   if (currentDepth > maxDepth) return repos;
 
@@ -247,10 +247,10 @@ async function scanForGitRepos(dir, onProgress, maxDepth = 6, currentDepth = 0) 
     for (const entry of entries) {
       if (entry.isDirectory()) {
         const name = entry.name.toLowerCase();
-        if (IGNORE_DIRS.has(name) || name.startsWith('.')) continue;
+        if (IGNORE_DIRS.has(name) || name.startsWith('.') || excludes.has(name)) continue;
 
         const fullPath = require('path').join(dir, entry.name);
-        tasks.push(scanForGitRepos(fullPath, onProgress, maxDepth, currentDepth + 1));
+        tasks.push(scanForGitRepos(fullPath, onProgress, maxDepth, currentDepth + 1, excludes));
       }
     }
     const results = await Promise.all(tasks);
@@ -259,6 +259,15 @@ async function scanForGitRepos(dir, onProgress, maxDepth = 6, currentDepth = 0) 
     // Ignore permissions errors
   }
   return repos;
+}
+
+async function cloneRepo(url, targetPath) {
+  try {
+    await execAsync(`git clone "${url}" "${targetPath}"`);
+    return { success: true, path: targetPath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }
 
 module.exports = {
@@ -274,5 +283,6 @@ module.exports = {
   openInVSCode,
   openWithApp,
   openWorkspaceAction,
-  scanForGitRepos
+  scanForGitRepos,
+  cloneRepo
 };

@@ -1,0 +1,29 @@
+<!-- Tab: Calendario -->
+<main class="main-content hidden" id="tab-calendario">
+      <header class="header">
+        <div class="header-titles">
+          <h1>Análisis y Calendario</h1>
+          <p>Actividad de commits por fecha y métricas de autores</p>
+        </div>
+      </header>
+      <div style="display: flex; gap: 24px; padding-top: 10px;">
+        <div id="calendar-container" style="flex: 2;"></div>
+        <div id="analytics-container" style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+          <!-- Top Autores Graph -->
+          <div class="card" style="padding: 16px;">
+            <h3 style="font-size: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">Top Contribuidores</h3>
+            <div id="author-charts-container">
+              <div style="color:var(--text-muted); font-size:12px;">Cargando analíticas...</div>
+            </div>
+          </div>
+          <!-- Top Proyectos Graph -->
+          <div class="card" style="padding: 16px;">
+            <h3 style="font-size: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">Actividad por Proyecto</h3>
+            <div id="project-charts-container">
+              <div style="color:var(--text-muted); font-size:12px;">Cargando analíticas...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
