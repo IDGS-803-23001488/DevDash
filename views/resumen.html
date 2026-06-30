@@ -20,8 +20,9 @@
         </div>
       </header>
 
+      <div id="dashboard-widgets-container" class="dashboard-dnd-grid">
       <!-- Estadísticas KPI -->
-      <div class="stats-grid">
+      <div class="stats-grid widget-full dashboard-widget" id="widget-kpi" draggable="true">
         <div class="stat-card stat-clickable" onclick="switchTabByName('proyectos')" title="Ver repositorios">
           <div class="stat-icon icon-green">
             <i data-lucide="git-branch" style="width:20px; height:20px;"></i>
@@ -61,33 +62,47 @@
       </div>
 
       <!-- Contenido Principal: Gráficos -->
-      <div class="dashboard-charts" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 10px;">
+
         
-        <!-- Chart 1: Jira (Donut) -->
-        <section class="card">
-          <div class="card-header">
-            <h2 class="card-title">
-              <i data-lucide="check-square" style="width:20px; height:20px;"></i>
-              Estado de Tareas
+        <!-- Chart 4: Quick To-Do (Timers) -->
+        <section class="card widget-half dashboard-widget" id="widget-todo" draggable="true" style="background: linear-gradient(145deg, var(--bg-panel), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(16, 185, 129, 0.15); box-shadow: 0 8px 32px rgba(0,0,0,0.1); backdrop-filter: blur(10px);">
+          <div class="card-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;">
+            <h2 class="card-title" style="color: var(--accent); font-weight: 600;">
+              <i data-lucide="check-circle" style="width:20px; height:20px; color: var(--accent);"></i>
+              Acceso Rápido: Tareas
             </h2>
           </div>
-          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 20px 0; height:220px;">
-            <div class="donut-chart" id="jira-donut" style="--p-todo: 0%; --p-prog: 0%; --p-done: 0%;">
-              <div class="donut-inner">
-                <span id="jira-total-text" style="font-size:24px; font-weight:bold; color:var(--text-main);">0</span>
-                <span style="font-size:12px; color:var(--text-muted);">Tareas</span>
-              </div>
+          <div style="display:flex; flex-direction:column; padding: 16px; height:240px; overflow:hidden;">
+            <!-- Input Area -->
+            <div style="display:flex; gap:10px; margin-bottom:16px; position:relative;">
+              <input type="text" id="todo-quick-input" class="settings-input" style="flex:1; padding:10px 14px; font-size:14px; border-radius: 4px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-light); color: var(--text-main); outline:none; transition: all 0.3s ease;" placeholder="¿Qué necesitas completar ahora? (Enter)" onfocus="this.style.borderColor='var(--accent)';" onblur="this.style.borderColor='var(--border-light)';" onkeydown="if(event.key === 'Enter') { event.preventDefault(); window.submitQuickTodo(); }">
+              <button class="update-btn" onclick="window.submitQuickTodo()" style="padding:0 16px; border-radius: 4px; background: var(--accent); color: #fff; font-weight:bold; border:none; cursor:pointer; transition: transform 0.1s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
+                <i data-lucide="plus" style="width:18px;height:18px;"></i>
+              </button>
             </div>
-            <div style="display:flex; gap:16px; margin-top:20px; font-size:13px;">
-              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span> Por Hacer (<span id="j-todo">0</span>)</div>
-              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></span> En Progreso (<span id="j-prog">0</span>)</div>
-              <div style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#10b981;"></span> Listo (<span id="j-done">0</span>)</div>
+            
+            <!-- List Area -->
+            <div id="quick-todo-list" style="flex:1; overflow-y:auto; font-size:13px; padding-right:4px;">
+              <!-- render quick list -->
             </div>
           </div>
         </section>
 
+
+      
+        
+        <!-- Chart 1: Jira (Donut) -->
+        <section class="card widget-half dashboard-widget" id="widget-jira" draggable="true">
+  <div class="card-header">
+    <h2 class="card-title">Estado del Tablero</h2>
+  </div>
+  <div style="padding: 16px; height:240px; display:flex; justify-content:center; align-items:center;">
+    <canvas id="chart-kanban" style="max-height:100%;"></canvas>
+  </div>
+</section>
+
         <!-- Chart 2: Git Status (Horizontal Bars) -->
-        <section class="card">
+        <section class="card widget-half dashboard-widget" id="widget-git" draggable="true">
           <div class="card-header">
             <h2 class="card-title">
               <i data-lucide="folder-git-2" style="width:20px; height:20px;"></i>
@@ -126,17 +141,14 @@
         </section>
 
         <!-- Chart 3: Actividad (Vertical Bars) -->
-        <section class="card" style="grid-column: span 2;">
-          <div class="card-header">
-            <h2 class="card-title">
-              <i data-lucide="activity" style="width:20px; height:20px;"></i>
-              Actividad de Commits (Últimos 7 días)
-            </h2>
-          </div>
-          <div class="bar-chart-vertical" id="activity-chart" style="height: 200px; padding: 20px; display:flex; align-items:flex-end; gap:20px; justify-content:space-around;">
-            <div style="color:var(--text-muted); font-size:13px;">Cargando actividad...</div>
-          </div>
-        </section>
+        <section class="card widget-full dashboard-widget" id="widget-activity" draggable="true">
+  <div class="card-header">
+    <h2 class="card-title"><i data-lucide="activity" style="width:16px; height:16px; margin-right:6px;"></i>Actividad de Código (Últimos 7 días)</h2>
+  </div>
+  <div style="padding: 16px; height:220px; display:flex; justify-content:center; align-items:center; width:100%;">
+    <canvas id="chart-commits" style="width:100%; height:100%;"></canvas>
+  </div>
+</section>
 
       </div>
 

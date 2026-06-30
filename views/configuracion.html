@@ -198,8 +198,64 @@
       </div>
 
       <div class="config-tab-content hidden" id="config-tab-apariencia">
+
         <div class="settings-container">
-          <h3>Icono de la App</h3>
+          <h3>Personalización del Perfil (Visual)</h3>
+          <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px;">Ajusta el tema y color de acento de tu perfil actual.</p>
+          
+          <label>Tema Base</label>
+          <select id="profile-theme-mode" class="settings-input" onchange="saveAppearanceConfig()">
+            <option value="light">Claro</option>
+            <option value="dark">Oscuro</option>
+          </select>
+          
+          <label style="margin-top:10px;">Paleta de Colores</label>
+          <div id="palette-swatches" style="display:flex; gap:12px; margin-top:6px; padding-bottom:4px;">
+            <button class="palette-btn" data-palette="emerald" title="Emerald (Defecto)" style="background: linear-gradient(135deg, #10b981, #3b82f6);" onclick="selectPalette('emerald')"></button>
+            <button class="palette-btn" data-palette="ocean" title="Ocean Depth" style="background: linear-gradient(135deg, #0ea5e9, #6366f1);" onclick="selectPalette('ocean')"></button>
+            <button class="palette-btn" data-palette="sunset" title="Sunset Flare" style="background: linear-gradient(135deg, #f43f5e, #f97316);" onclick="selectPalette('sunset')"></button>
+            <button class="palette-btn" data-palette="dracula" title="Dracula (Neon)" style="background: linear-gradient(135deg, #bd93f9, #ff79c6);" onclick="selectPalette('dracula')"></button>
+            <button class="palette-btn" data-palette="monochrome" title="Sleek Mono" style="background: linear-gradient(135deg, #475569, #94a3b8);" onclick="selectPalette('monochrome')"></button>
+          </div>
+          
+          <label style="margin-top:10px;">Imagen de Fondo (URL o Ruta Local)</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="profile-bg-image" class="settings-input" placeholder="ej. file:///ruta/a/imagen.jpg o https://..." style="flex:1;" onchange="saveAppearanceConfig()">
+            <button class="btn-refresh danger" onclick="document.getElementById('profile-bg-image').value=''; saveAppearanceConfig();" title="Limpiar fondo"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+          </div>
+        </div>
+        
+        <div class="settings-container">
+          <h3>Widgets del Dashboard (Perfil)</h3>
+          <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px;">Elige qué métricas se mostrarán en la pestaña Resumen para este perfil.</p>
+          <div class="tool-visibility-settings" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <label class="tool-toggle">
+              <input type="checkbox" id="widget-visible-kpi" onchange="saveAppearanceConfig()">
+              <span><strong>Métricas Rápidas</strong><small>Tarjetas superiores</small></span>
+            </label>
+            <label class="tool-toggle">
+              <input type="checkbox" id="widget-visible-jira" onchange="saveAppearanceConfig()">
+              <span><strong>Estado Tareas</strong><small>Donut Chart</small></span>
+            </label>
+            <label class="tool-toggle">
+              <input type="checkbox" id="widget-visible-git" onchange="saveAppearanceConfig()">
+              <span><strong>Salud Git</strong><small>Barras Horizontales</small></span>
+            </label>
+            
+            <label class="tool-toggle">
+              <input type="checkbox" id="widget-visible-todo" onchange="saveAppearanceConfig()">
+              <span><strong>Tareas y Tiempos</strong><small>Lista y Temporizadores</small></span>
+            </label>
+
+            <label class="tool-toggle">
+              <input type="checkbox" id="widget-visible-activity" onchange="saveAppearanceConfig()">
+              <span><strong>Actividad</strong><small>Commits en 7 días</small></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-container">
+          <h3>Icono de la App (Global)</h3>
           <p style="color:var(--text-muted); font-size:14px; margin-bottom:15px;">Selecciona un PNG, JPG o ICO local y previsualizalo antes de usarlo.</p>
           <div class="app-icon-settings">
             <div id="app-icon-preview" class="app-icon-preview">

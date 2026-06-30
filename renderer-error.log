@@ -1,0 +1,150 @@
+2026-06-30T18:39:17.082Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:18.073Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:18.265Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:18.489Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:18.617Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:18.777Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:20.193Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:20.616Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:20.760Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async submitQuickTodo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2851:5)
+
+2026-06-30T18:39:24.712Z
+ReferenceError: openCreateJiraModal is not defined
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html:388:14)
+
+2026-06-30T18:39:27.296Z (Promise)
+Error: Error invoking remote method 'todo-action': Error: No handler registered for 'todo-action'
+    at IpcRenderer.invoke (node:electron/js2c/renderer_init:2:9699)
+    at async clearCompletedTodos (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2903:5)
+
+2026-06-30T18:42:31.419Z (Promise)
+TypeError: Cannot set properties of null (setting 'innerHTML')
+    at addRepo (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:515:24)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html:388:14)
+
+2026-06-30T19:39:28.069Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T19:39:29.973Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T19:39:30.141Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T19:39:30.301Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T19:39:30.941Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T19:40:06.100Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T19:40:06.284Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T19:40:06.444Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T19:40:06.612Z
+TypeError: window.openTodoEditor is not a function
+    at editBtn.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:2969:34)
+
+2026-06-30T20:15:26.026Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:27.281Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:27.745Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:27.921Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:28.105Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:28.257Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:28.393Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:28.537Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:28.673Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:28.826Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+
+2026-06-30T20:15:28.937Z
+ReferenceError: collectWorkspaceModal is not defined
+    at openWorkspaceAddActionModal (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/renderer.js:1865:3)
+    at HTMLButtonElement.onclick (file:///home/sdib/Documentos/personal/personalizacion/proyectos/DevDash/index.html#:1:1)
+

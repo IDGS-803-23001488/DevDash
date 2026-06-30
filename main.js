@@ -1,6 +1,7 @@
 const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, nativeImage, Notification, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const todoService = require('./todoService');
 const configManager = require('./configManager');
 const gitService = require('./gitService');
 const jiraService = require('./jiraService');
@@ -137,7 +138,27 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  
+ipcMain.handle('save-todo-media', async (event, buffer, extension) => {
+  try {
+    const mediaDir = path.join(app.getPath('userData'), 'todo-media');
+    if (!fs.existsSync(mediaDir)) {
+      fs.mkdirSync(mediaDir, { recursive: true });
+    }
+    const filename = 'img_' + Date.now() + (extension || '.png');
+    const filepath = path.join(mediaDir, filename);
+    fs.writeFileSync(filepath, Buffer.from(buffer));
+    
+    // Devolvemos el path estandarizado a file:/// con slashes adelante para todas las plataformas
+    let fileUrl = 'file:///' + filepath.replace(/\\/g, '/');
+    return fileUrl;
+  } catch (err) {
+    console.error('Error saving media:', err);
+    return null;
+  }
+});
+app.whenReady().then(() => {
+    todoService.initDB(app.getPath('userData'));
     createWindow();
     createTray();
 
@@ -514,5 +535,30 @@ ipcMain.on('notify', (e, { title, body, type }) => {
       body: body || '',
       silent: type === 'info'
     }).show();
+  }
+});
+// --- TODO ACTION HANDLER ---
+ipcMain.handle('todo-action', async (event, action, payload) => {
+  try {
+    switch (action) {
+      case 'get': return await todoService.getTodos(payload.profileId);
+      case 'add': return await todoService.addTodo(payload.profileId, payload.title);
+      case 'toggle': return await todoService.toggleTodo(payload.id, payload.completed);
+      case 'delete': return await todoService.deleteTodo(payload.id);
+      case 'clear': return await todoService.clearCompleted(payload.profileId);
+      case 'start': return await todoService.startTimer(payload.id);
+      case 'stop': return await todoService.stopTimer(payload.id);
+      
+      case 'updateDescription': return await todoService.updateTodoDescription(payload.id, payload.description, payload.title);
+      case 'updateStatus': return await todoService.updateTodoStatus(payload.id, payload.status);
+      case 'getColumns': return await todoService.getColumns();
+      case 'addColumn': return await todoService.addColumn(payload.colName);
+      case 'deleteColumn': return await todoService.deleteColumn(payload.colName);
+      case 'addDuration': return await todoService.addTodoDuration(payload.id, payload.duration);
+      default: return null;
+    }
+  } catch (err) {
+    console.error('Todo Error:', err);
+    return { error: err.message };
   }
 });

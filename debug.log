@@ -1,0 +1,5 @@
+
+> devdash@1.0.0 start
+> electron .
+
+[55126:0630/123724.159400:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:1680] Installed VAAPI version is too old. min supported version: 1.17 installed version: 1.14

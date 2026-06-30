@@ -6,7 +6,8 @@
   <title>DevDash</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
-</head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css"></head>
 <body>
   <!-- Barra de Título Arrastrable -->
   <div class="title-bar">
@@ -317,6 +318,10 @@
           <i data-lucide="check-square" style="flex-shrink:0;"></i>
           <span class="nav-text">Tareas Jira</span>
         </a>
+        <a href="#" class="nav-item" onclick="switchTab('todo', this)" title="To-Do List">
+          <i data-lucide="list-todo" style="flex-shrink:0;"></i>
+          <span class="nav-text">To-Do List</span>
+        </a>
         <a href="#" class="nav-item" onclick="switchTab('workspaces', this)" title="Workspaces">
           <i data-lucide="rocket" style="flex-shrink:0;"></i>
           <span class="nav-text">Workspaces</span>
@@ -374,7 +379,7 @@
       (() => {
         const fs = require('fs');
         const path = require('path');
-        const views = ['resumen', 'proyectos', 'jira', 'workspaces', 'gemini', 'joplin', 'keepass', 'actividad', 'calendario', 'configuracion'];
+        const views = ['resumen', 'proyectos', 'jira', 'todo', 'workspaces', 'gemini', 'joplin', 'keepass', 'actividad', 'calendario', 'configuracion'];
         const root = document.getElementById('views-root');
         for (const view of views) {
           const file = path.join(__dirname, 'views', `${view}.html`);
@@ -384,7 +389,74 @@
     </script>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
   <script src="renderer.js"></script>
+
+  <!-- TODO MARKDOWN EDITOR MODAL -->
+  
+  <div id="modal-todo-edit" class="modal-overlay hidden" style="z-index: 10005;">
+    <div class="modal-content" style="max-width: 900px; width: 90vw; height: 85vh; border-radius: 12px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); display:flex; flex-direction:column;" onclick="event.stopPropagation()">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display:flex; justify-content:space-between; align-items:center;">
+        <input type="text" id="todo-edit-title" style="background:transparent; border:none; color:#fff; font-size:18px; font-weight:600; width:100%; outline:none;" placeholder="Título de la tarea...">
+        <button class="btn-close-modal" onclick="document.getElementById('modal-todo-edit').classList.add('hidden')" style="color:rgba(255,255,255,0.5); background:none; border:none; cursor:pointer;"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="modal-body" style="flex:1; padding: 24px; display:flex; flex-direction:column; position:relative; overflow:hidden;">
+        <!-- EasyMDE Target -->
+        <textarea id="todo-edit-desc" style="display:none;"></textarea>
+      </div>
+
+      <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:12px; color:rgba(255,255,255,0.3);"><i data-lucide="image" style="width:12px; height:12px; margin-right:4px;"></i>Soporta Drag & Drop y Ctrl+V de imágenes</span>
+        <button id="todo-edit-save" style="background:var(--accent); color:#fff; border:none; border-radius:6px; padding:8px 24px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- FOCUS MODE OVERLAY -->
+  <div id="focus-mode-overlay" class="hidden" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:#020617; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#f8fafc; font-family:'Inter', sans-serif;">
+    
+    <!-- Background Lofi Embed (Invisible but active) -->
+    <div id="lofi-player-container" style="position:absolute; top:-9999px; left:-9999px; width:1px; height:1px; overflow:hidden; opacity:0;"></div>
+    
+    <div style="position:absolute; top:40px; right:40px;">
+      <button onclick="window.exitFocusMode()" style="background:rgba(255,255,255,0.1); border:none; border-radius:8px; padding:12px 24px; color:#f8fafc; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+        <i data-lucide="log-out"></i> Salir del Enfoque
+      </button>
+    </div>
+
+    <div style="text-align:center; max-width:800px; width:100%;">
+      <div style="margin-bottom:30px; display:inline-flex; background:rgba(255,255,255,0.05); padding:8px; border-radius:100px; gap:8px;">
+        <button onclick="window.setPomodoroMode('focus')" id="btn-pomo-focus" style="background:var(--accent); color:#fff; border:none; padding:8px 24px; border-radius:100px; cursor:pointer; font-weight:600; font-size:14px;">Focus (25m)</button>
+        <button onclick="window.setPomodoroMode('short')" id="btn-pomo-short" style="background:transparent; color:#94a3b8; border:none; padding:8px 24px; border-radius:100px; cursor:pointer; font-weight:600; font-size:14px;">Short Break (5m)</button>
+        <button onclick="window.setPomodoroMode('long')" id="btn-pomo-long" style="background:transparent; color:#94a3b8; border:none; padding:8px 24px; border-radius:100px; cursor:pointer; font-weight:600; font-size:14px;">Long Break (15m)</button>
+      </div>
+      
+      <div id="focus-task-title" style="font-size:24px; color:#cbd5e1; margin-bottom:20px; font-weight:500; letter-spacing:0.5px;">Ninguna tarea seleccionada</div>
+      
+      <div id="focus-timer-display" style="font-size:160px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; margin-bottom:40px; text-shadow:0 0 40px rgba(16,185,129,0.2); transition: color 0.3s ease;">25:00</div>
+      
+      <div style="display:flex; justify-content:center; gap:20px;">
+        <button id="btn-pomo-toggle" onclick="window.togglePomodoro()" style="background:#fff; color:#0f172a; border:none; width:80px; height:80px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(255,255,255,0.2); transition:transform 0.2s;">
+          <i data-lucide="play" style="width:36px; height:36px; margin-left:6px;"></i>
+        </button>
+        <button id="btn-pomo-reset" onclick="window.resetPomodoro()" style="background:rgba(255,255,255,0.1); color:#fff; border:none; width:80px; height:80px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s;">
+          <i data-lucide="rotate-ccw" style="width:32px; height:32px;"></i>
+        </button>
+      </div>
+
+      <div style="margin-top:60px;">
+        <button id="btn-pomo-lofi" onclick="window.toggleLofi()" style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:#94a3b8; border-radius:100px; padding:10px 24px; cursor:pointer; display:inline-flex; align-items:center; gap:10px; font-size:15px; transition:0.3s;">
+          <i data-lucide="headphones"></i> Lofi Radio: Apagado
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- END FOCUS MODE -->
 </body>
 </html>
 

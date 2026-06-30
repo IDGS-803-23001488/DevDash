@@ -50,7 +50,8 @@ const defaultConfig = {
       name: 'Default',
       repos: [],
       jira: { baseUrl: '', email: '', token: '' },
-      tools: { gemini: true, joplin: true, keepass: true }
+      tools: { gemini: true, joplin: true, keepass: true },
+      customization: { themeMode: 'light', colorPalette: 'emerald', bgImage: '', widgets: { kpi: true, jiraDonut: true, gitHealth: true, activity: true } }
     }
   ],
   editors: DEFAULT_EDITORS,
@@ -104,6 +105,20 @@ function normalizeConfig(cfg = {}) {
       gemini: profile.tools?.gemini !== false,
       joplin: profile.tools?.joplin !== false,
       keepass: profile.tools?.keepass !== false
+    },
+    customization: {
+      themeMode: profile.customization?.themeMode || 'light',
+      colorPalette: profile.customization?.colorPalette || 'emerald',
+      bgImage: profile.customization?.bgImage || '',
+      widgets: {
+        kpi: profile.customization?.widgets?.kpi !== false,
+        jiraDonut: profile.customization?.widgets?.jiraDonut !== false,
+        gitHealth: profile.customization?.widgets?.gitHealth !== false,
+        activity: profile.customization?.widgets?.activity !== false,
+        todo: profile.customization?.widgets?.todo !== false,
+        productivity: profile.customization?.widgets?.productivity !== false
+      },
+      widgetOrder: profile.customization?.widgetOrder || ['widget-productivity', 'widget-kpi', 'widget-jira', 'widget-git', 'widget-todo', 'widget-activity']
     }
   }));
 

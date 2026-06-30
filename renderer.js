@@ -1,4 +1,16 @@
+
+window.addEventListener('error', function(event) {
+  const fs = require('fs');
+  fs.appendFileSync('./renderer-error.log', new Date().toISOString() + '\n' + event.error.stack + '\n\n');
+});
+window.addEventListener('unhandledrejection', function(event) {
+  const fs = require('fs');
+  fs.appendFileSync('./renderer-error.log', new Date().toISOString() + ' (Promise)\n' + (event.reason ? event.reason.stack : event.reason) + '\n\n');
+});
 const { ipcRenderer } = require('electron');
+const { createRepoCard } = require('./components/RepoCard.js');
+const { createJiraCard } = require('./components/JiraCard.js');
+const { createWorkspaceCard } = require('./components/WorkspaceCard.js');
 
 // ─── UI References ────────────────────────────────────────────────────────────
 const repoList = document.getElementById('repo-list');
@@ -169,6 +181,7 @@ updateClock();
 
 // ─── Keyboard Focus ───────────────────────────────────────────────────────────
 function renderFocus() {
+  renderCharts();
   document.querySelectorAll('.kb-focus').forEach(el => el.classList.remove('kb-focus'));
   if (cursorZone === 'repos' && repoList && repoList.children[cursorIndex]) {
     repoList.children[cursorIndex].classList.add('kb-focus');
@@ -189,6 +202,7 @@ async function init() {
     await selectProfile(0);
     renderProfilesConfig();
     renderWorkspacesTab();
+    initDashboardDND();
   } else {
     profileNameEl.textContent = 'Sin perfil';
     finishProgress();
@@ -205,6 +219,7 @@ async function selectProfile(index) {
     const profile = profiles[index];
     profileNameEl.textContent = profile.name;
     avatarInitialsEl.textContent = profile.name.substring(0, 2).toUpperCase();
+    applyProfileCustomization(profile);
 
     if (repoList) repoList.innerHTML = '<div style="padding:20px; color:#64748b; text-align:center; font-size:13px;">Cargando repositorios...</div>';
     if (jiraList) jiraList.innerHTML = '<div style="padding:20px; color:#64748b; text-align:center; font-size:13px;">Cargando tareas...</div>';
@@ -878,36 +893,7 @@ function renderGitTab() {
     container.innerHTML = '<div style="padding:40px; color:#64748b; text-align:center;">No hay repositorios. Haz clic en "Agregar Repositorio".</div>';
     return;
   }
-  container.innerHTML = allRepos.map((r, i) => {
-    const cls = REPO_COLORS[i % REPO_COLORS.length];
-    const colorName = cls.split('-')[1];
-    const aheadBadge = r.ahead > 0 ? `<span style="background:#dbeafe;color:#1d4ed8;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:700;">↑${r.ahead} por subir</span>` : '';
-    const behindBadge = r.behind > 0 ? `<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:700;">↓${r.behind} por bajar</span>` : '';
-    const dirtyBadge = r.changedFiles > 0 ? `<span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:8px;font-size:10px;font-weight:700;">${r.changedFiles} archivo(s) modificados</span>` : '';
-
-    return `
-      <div class="repo-item" style="padding:18px 20px; flex-wrap:wrap; gap:12px; cursor:pointer;" onclick="if(event.target.closest('button') || event.target.closest('select')) return; showRepoModal(${i})">
-        <div class="repo-icon ${cls}">
-          <i data-lucide="folder" style="width:20px;height:20px;"></i>
-        </div>
-        <div class="repo-info" style="flex:1;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <div class="repo-name">${r.name}</div>
-            <div class="repo-branch text-${colorName}" style="font-size:12px;">
-              <i data-lucide="git-branch" style="width:12px;height:12px;"></i>
-              ${r.branch}
-            </div>
-            <div class="dot ${r.isDirty ? 'dot-orange' : 'dot-' + colorName}" style="width:8px;height:8px;"></div>
-          </div>
-          <div class="repo-path" style="margin-top:2px;">${r.path}</div>
-          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">${aheadBadge}${behindBadge}${dirtyBadge}</div>
-        </div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-          ${buildOpenWithDropdown(r.path)}
-        </div>
-      </div>
-    `;
-  }).join('');
+  container.replaceChildren(...allRepos.map((r, i) => createRepoCard(r, i, REPO_COLORS, buildOpenWithDropdown, showRepoModal)));
   
   renderProjectCharts('project-charts-container-2');
   lucide.createIcons();
@@ -923,23 +909,7 @@ function renderJiraTab(filter = 'mis') {
     container.innerHTML = '<div style="padding:40px; color:#64748b; text-align:center;">No hay tickets disponibles. Configura Jira en Configuración.</div>';
     return;
   }
-  container.innerHTML = issues.map(issue => {
-    const statusClass = getStatusClass(issue.status);
-
-    return `
-      <div class="jira-item" style="padding:14px 0; cursor:pointer;" onclick="showJiraDetails(${jsString(issue.key)})">
-        <div class="badge-key">${escapeHtml(issue.key)}</div>
-        <div class="jira-title" style="font-size:14px;">${escapeHtml(issue.summary)}</div>
-        <button class="badge-status ${statusClass} jira-status-btn" onclick="event.stopPropagation(); openJiraQuickStatus(${jsString(issue.key)})" title="Cambiar estado">
-          ${escapeHtml(issue.status)}
-        </button>
-        <button class="btn-refresh jira-row-action" onclick="event.stopPropagation(); openJiraQuickStatus(${jsString(issue.key)})" title="Cambio rapido de estado">
-          <i data-lucide="move-right" style="width:14px;height:14px;"></i>
-        </button>
-        <div class="jira-time" style="min-width:60px;">${escapeHtml(issue.assignee ? issue.assignee.split(' ')[0] : '')}</div>
-      </div>
-    `;
-  }).join('');
+  container.replaceChildren(...issues.map(issue => createJiraCard(issue, showJiraDetails, openJiraQuickStatus)));
   lucide.createIcons();
 }
 window.filterJira = function(filter, el) {
@@ -1041,7 +1011,7 @@ async function showJiraDetails(issueKey) {
   `;
   lucide.createIcons();
 }
-window.showJiraDetails = showJiraDetails;
+
 
 window.applyJiraTransition = async function(issueKey, transitionId = null) {
   const sel = document.getElementById('jira-transition-sel');
@@ -1074,7 +1044,7 @@ window.addJiraComment = async function(issueKey) {
   }
 };
 
-window.openJiraQuickStatus = async function(issueKey) {
+async function openJiraQuickStatus(issueKey) {
   const overlay = document.getElementById('modal-overlay');
   const title = document.getElementById('modal-title');
   const body = document.getElementById('modal-body');
@@ -1472,6 +1442,7 @@ function switchTab(tabId, el) {
   if (tabId === 'workspaces') renderWorkspacesTab();
   if (tabId === 'actividad') renderActivityTab();
   if (tabId === 'calendario') renderCalendar();
+  if (tabId === 'todo') renderTodoTab();
   if (tabId === 'configuracion') {
     if (profiles[activeProfileIndex]) {
       const jira = profiles[activeProfileIndex].jira || {};
@@ -1540,22 +1511,7 @@ function renderDashJiraList(filter) {
     jiraList.innerHTML = '<div style="padding:20px; color:#64748b; text-align:center; font-size:13px;">No hay tickets cargados.</div>';
     return;
   }
-  let activeCount = 0;
-  jiraList.innerHTML = issues.map(issue => {
-    let statusClass = 'status-default';
-    const s = issue.status.toUpperCase();
-    if (s.includes('PROGRESO')) { statusClass = 'status-progreso'; activeCount++; }
-    else if (s.includes('REVISIÓN') || s.includes('REVIEW')) { statusClass = 'status-revision'; activeCount++; }
-    else if (s.includes('HECHO') || s.includes('DONE')) statusClass = 'status-hecho';
-    return `
-      <div class="jira-item" style="cursor:pointer;" onclick="showJiraDetails('${issue.key}')">
-        <div class="badge-key">${issue.key}</div>
-        <div class="jira-title">${issue.summary}</div>
-        <div class="badge-status ${statusClass}">${issue.status}</div>
-        <div class="jira-time">${issue.assignee ? issue.assignee.split(' ')[0] : ''}</div>
-      </div>
-    `;
-  }).join('');
+  jiraList.replaceChildren(...issues.map(issue => createJiraCard(issue, showJiraDetails, openJiraQuickStatus)));
 }
 
 
@@ -1686,31 +1642,7 @@ function renderWorkspacesTab() {
     return;
   }
 
-  container.innerHTML = workspaces.map((workspace, index) => `
-    <div class="workspace-card">
-      <div class="workspace-card-head">
-        <div>
-          <h3>${escapeHtml(workspace.name)}</h3>
-          <p>${escapeHtml(workspace.description || `${workspace.items?.length || 0} acciones configuradas`)}</p>
-        </div>
-        <button class="update-btn" onclick="openWorkspace(${index})">
-          <i data-lucide="play" style="width:15px;height:15px;"></i>
-          Abrir todo
-        </button>
-      </div>
-      <div class="workspace-items">
-        ${(workspace.items || []).map(item => `
-          <div class="workspace-item">
-            <i data-lucide="${workspaceIcon(item.type)}" style="width:16px;height:16px;"></i>
-            <div>
-              <strong>${escapeHtml(item.name)}</strong>
-              <span>${escapeHtml(item.type === 'url' ? item.url : `${item.command} ${(item.args || []).join(' ')}`)}</span>
-            </div>
-          </div>
-        `).join('') || '<div style="color:var(--text-muted); font-size:13px;">Sin acciones.</div>'}
-      </div>
-    </div>
-  `).join('');
+  container.replaceChildren(...workspaces.map((ws, index) => createWorkspaceCard(ws, index, openWorkspace, null, null)));
   lucide.createIcons();
 }
 
@@ -1736,17 +1668,49 @@ function renderWorkspacesSettings() {
     return;
   }
 
-  container.innerHTML = workspaces.map((workspace, index) => `
-    <div class="workspace-config-row">
-      <div style="flex:1; min-width:0;">
-        <div style="font-size:14px; font-weight:700;">${escapeHtml(workspace.name)}</div>
-        <div style="font-size:12px; color:var(--text-muted);">${escapeHtml(workspace.items?.length || 0)} acciones</div>
-      </div>
-      <button class="btn-refresh" onclick="editWorkspace(${index})"><i data-lucide="pencil" style="width:14px;height:14px;"></i> Editar</button>
-      <button class="btn-refresh" onclick="openWorkspace(${index})"><i data-lucide="play" style="width:14px;height:14px;"></i> Probar</button>
-      <button class="btn-refresh danger" onclick="deleteWorkspace(${index})"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
-    </div>
-  `).join('');
+  container.replaceChildren(...workspaces.map((ws, index) => {
+    const row = document.createElement('div');
+    row.className = 'workspace-config-row';
+    
+    const info = document.createElement('div');
+    info.style.flex = '1';
+    info.style.minWidth = '0';
+    
+    const nameStr = document.createElement('div');
+    nameStr.style.fontSize = '14px';
+    nameStr.style.fontWeight = '700';
+    nameStr.textContent = ws.name || '';
+    
+    const descStr = document.createElement('div');
+    descStr.style.fontSize = '12px';
+    descStr.style.color = 'var(--text-muted)';
+    descStr.textContent = (ws.items?.length || 0) + ' acciones';
+    
+    info.appendChild(nameStr);
+    info.appendChild(descStr);
+    
+    const btnEdit = document.createElement('button');
+    btnEdit.className = 'btn-refresh';
+    btnEdit.innerHTML = '<i data-lucide="pencil" style="width:14px;height:14px;"></i> Editar';
+    btnEdit.addEventListener('click', () => editWorkspace(index));
+    
+    const btnPlay = document.createElement('button');
+    btnPlay.className = 'btn-refresh';
+    btnPlay.innerHTML = '<i data-lucide="play" style="width:14px;height:14px;"></i> Probar';
+    btnPlay.addEventListener('click', () => openWorkspace(index));
+    
+    const btnDel = document.createElement('button');
+    btnDel.className = 'btn-refresh danger';
+    btnDel.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;"></i>';
+    btnDel.addEventListener('click', () => deleteWorkspace(index));
+    
+    row.appendChild(info);
+    row.appendChild(btnEdit);
+    row.appendChild(btnPlay);
+    row.appendChild(btnDel);
+    
+    return row;
+  }));
   lucide.createIcons();
 }
 
@@ -2470,7 +2434,7 @@ async function toggleCommitDiff(element, repoPath, hash) {
     container.innerHTML = `<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:8px;">Error al cargar cambios.</div>`;
   }
 }
-window.toggleCommitDiff = toggleCommitDiff;
+
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -2496,3 +2460,1199 @@ window.addEventListener('keydown', (e) => {
     }
   }
 });
+
+
+// --- Profile Customization Engine ---
+
+function applyProfileCustomization(profile) {
+  if (!profile) return;
+  const cust = profile.customization || {};
+  const theme = cust.themeMode || 'light';
+  
+  if (theme === 'dark') {
+    document.body.classList.add('theme-dark');
+  } else {
+    document.body.classList.remove('theme-dark');
+  }
+  
+  
+  const paletteId = cust.colorPalette || 'emerald';
+  currentSelectedPalette = paletteId;
+  const pal = COLOR_PALETTES[paletteId] || COLOR_PALETTES['emerald'];
+
+  document.documentElement.style.setProperty('--accent-green-bg', pal.primary + '20');
+  document.documentElement.style.setProperty('--accent-green-text', pal.primary);
+  
+  document.documentElement.style.setProperty('--accent-blue-bg', pal.info + '20');
+  document.documentElement.style.setProperty('--accent-blue-text', pal.info);
+
+  document.documentElement.style.setProperty('--accent-orange-bg', pal.warning + '20');
+  document.documentElement.style.setProperty('--accent-orange-text', pal.warning);
+
+  document.documentElement.style.setProperty('--accent-purple-bg', pal.secondary + '20');
+  document.documentElement.style.setProperty('--accent-purple-text', pal.secondary);
+  
+  // Sync palette UI
+  const btns = document.querySelectorAll('.palette-btn');
+  btns.forEach(b => b.classList.toggle('active', b.dataset.palette === paletteId));
+
+  
+  if (cust.bgImage) {
+    document.body.classList.add('has-custom-bg');
+    document.documentElement.style.setProperty('--user-bg-image', 'url(' + cust.bgImage + ')');
+  } else {
+    document.body.classList.remove('has-custom-bg');
+    document.documentElement.style.removeProperty('--user-bg-image');
+  }
+  
+  
+  // Widgets Visibility
+  const w = cust.widgets || {};
+  const kpiEl = document.getElementById('widget-kpi');
+  const jiraEl = document.getElementById('widget-jira');
+  const gitEl = document.getElementById('widget-git');
+  const activityEl = document.getElementById('widget-activity');
+
+  // Reorder nodes before applying visibility
+  const order = cust.widgetOrder || ['widget-kpi', 'widget-jira', 'widget-git', 'widget-activity'];
+  const dndContainer = document.getElementById('dashboard-widgets-container');
+  if (dndContainer) {
+    order.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) dndContainer.appendChild(el);
+    });
+  }
+
+  
+  if (kpiEl) kpiEl.style.display = w.kpi !== false ? '' : 'none';
+  if (jiraEl) jiraEl.style.display = w.jiraDonut !== false ? '' : 'none';
+  if (gitEl) gitEl.style.display = w.gitHealth !== false ? '' : 'none';
+  if (activityEl) activityEl.style.display = w.activity !== false ? '' : 'none';
+
+  // Sync inputs if in config view
+  const thEl = document.getElementById('profile-theme-mode');
+  
+  
+  const bgEl = document.getElementById('profile-bg-image');
+  
+  const wkpi = document.getElementById('widget-visible-kpi');
+  const wjira = document.getElementById('widget-visible-jira');
+  const wgit = document.getElementById('widget-visible-git');
+  const wact = document.getElementById('widget-visible-activity');
+
+  if (thEl) thEl.value = theme;
+  
+  
+  if (bgEl) bgEl.value = cust.bgImage || '';
+  
+  if (wkpi) wkpi.checked = w.kpi !== false;
+  if (wjira) wjira.checked = w.jiraDonut !== false;
+  if (wgit) wgit.checked = w.gitHealth !== false;
+  if (wact) wact.checked = w.activity !== false;
+}
+
+async function saveAppearanceConfig() {
+  const profile = profiles[activeProfileIndex];
+  if (!profile) return;
+  
+  if (!profile.customization) profile.customization = {};
+  
+  const thEl = document.getElementById('profile-theme-mode');
+  const clEl = document.getElementById('profile-accent-color');
+  const bgEl = document.getElementById('profile-bg-image');
+  
+  const wkpi = document.getElementById('widget-visible-kpi');
+  const wjira = document.getElementById('widget-visible-jira');
+  const wgit = document.getElementById('widget-visible-git');
+  const wact = document.getElementById('widget-visible-activity');
+
+  if (thEl) profile.customization.themeMode = thEl.value;
+  profile.customization.colorPalette = currentSelectedPalette;
+  if (bgEl) profile.customization.bgImage = bgEl.value;
+  
+  if (!profile.customization.widgets) profile.customization.widgets = {};
+  if (wkpi) profile.customization.widgets.kpi = wkpi.checked;
+  if (wjira) profile.customization.widgets.jiraDonut = wjira.checked;
+  if (wgit) profile.customization.widgets.gitHealth = wgit.checked;
+  if (wact) profile.customization.widgets.activity = wact.checked;
+
+  await ipcRenderer.invoke('save-config', { profiles });
+  applyProfileCustomization(profile);
+  
+  // Refrescar el pie de los cards de resumen para reposicionar
+  renderProjectCharts('project-charts-container'); 
+}
+window.saveAppearanceConfig = saveAppearanceConfig;
+
+
+// --- Drag and Drop Logic ---
+function initDashboardDND() {
+  const container = document.getElementById('dashboard-widgets-container');
+  if (!container) return;
+  const widgets = container.querySelectorAll('.dashboard-widget');
+  
+  let draggedEl = null;
+
+  widgets.forEach(widget => {
+    // Evitar multiples listeners si se llama varias veces (usando un flag custom)
+    if (widget.dataset.dndInit) return;
+    widget.dataset.dndInit = "true";
+
+    widget.addEventListener('dragstart', (e) => {
+      // Evitar que inputs o selects activen el drag
+      if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON') {
+        e.preventDefault();
+        return;
+      }
+      draggedEl = widget;
+      setTimeout(() => widget.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', widget.id);
+    });
+
+    widget.addEventListener('dragend', () => {
+      widget.classList.remove('dragging');
+      draggedEl = null;
+      saveWidgetOrder(); 
+    });
+
+    widget.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      return false;
+    });
+
+    widget.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      if (draggedEl && widget !== draggedEl) {
+        widget.classList.add('drag-over');
+      }
+    });
+
+    widget.addEventListener('dragleave', () => {
+      widget.classList.remove('drag-over');
+    });
+
+    widget.addEventListener('drop', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      widget.classList.remove('drag-over');
+
+      if (draggedEl && draggedEl !== widget) {
+        const all = Array.from(container.children);
+        const draggedIndex = all.indexOf(draggedEl);
+        const targetIndex = all.indexOf(widget);
+
+        if (draggedIndex < targetIndex) {
+          container.insertBefore(draggedEl, widget.nextSibling);
+        } else {
+          container.insertBefore(draggedEl, widget);
+        }
+      }
+      return false;
+    });
+  });
+}
+
+async function saveWidgetOrder() {
+  const container = document.getElementById('dashboard-widgets-container');
+  if (!container) return;
+  
+  const order = Array.from(container.children)
+                     .filter(el => el.classList.contains('dashboard-widget'))
+                     .map(el => el.id)
+                     .filter(id => id); 
+  
+  const profile = profiles[activeProfileIndex];
+  if (profile) {
+    if (!profile.customization) profile.customization = {};
+    profile.customization.widgetOrder = order;
+    await ipcRenderer.invoke('save-config', { profiles });
+  }
+}
+
+const COLOR_PALETTES = {
+  emerald: { primary: '#10b981', info: '#3b82f6', warning: '#f59e0b', secondary: '#8b5cf6' },
+  ocean: { primary: '#0ea5e9', info: '#6366f1', warning: '#eab308', secondary: '#14b8a6' },
+  sunset: { primary: '#f43f5e', info: '#8b5cf6', warning: '#f97316', secondary: '#db2777' },
+  dracula: { primary: '#bd93f9', info: '#8be9fd', warning: '#f1fa8c', secondary: '#ff79c6' },
+  monochrome: { primary: '#64748b', info: '#94a3b8', warning: '#cbd5e1', secondary: '#475569' }
+};
+
+let currentSelectedPalette = 'emerald';
+
+function selectPalette(id) {
+  currentSelectedPalette = id;
+  const btns = document.querySelectorAll('.palette-btn');
+  btns.forEach(b => b.classList.toggle('active', b.dataset.palette === id));
+  saveAppearanceConfig();
+}
+window.selectPalette = selectPalette;
+
+// --- TODO LIST LOGIC ---\n
+function formatDuration(ms) {
+  let seconds = Math.floor(ms / 1000);
+  let hours = Math.floor(seconds / 3600);
+  seconds %= 3600;
+  let minutes = Math.floor(seconds / 60);
+  seconds %= 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+
+
+let currentTodoFilter = 'all';
+
+function setTodoFilter(filter) {
+  currentTodoFilter = filter;
+  // Update UI Pills
+  document.querySelectorAll('.todo-filter-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.style.background = 'transparent';
+    btn.style.color = 'var(--text-muted)';
+  });
+  const activeBtn = document.getElementById('todo-filter-' + filter);
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+    activeBtn.style.background = 'var(--accent)';
+    activeBtn.style.color = '#fff';
+  }
+  renderTodoTab();
+}
+
+function buildTodoItemHTML(t, isQuick = false) {
+  const el = document.createElement('div');
+  el.className = 'repo-item';
+  el.style.display = 'flex';
+  el.style.alignItems = 'center';
+  el.style.gap = '10px';
+  el.style.opacity = t.completed ? '0.5' : '1';
+  el.style.padding = isQuick ? '8px 12px' : '12px 18px';
+  el.style.marginBottom = '8px';
+  el.style.borderRadius = '8px';
+  el.style.background = t.isRunning ? 'rgba(16, 185, 129, 0.08)' : (t.completed ? 'rgba(0,0,0,0.1)' : 'var(--bg-panel)');
+  el.style.border = t.isRunning ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-light)';
+  el.style.transition = 'all 0.2s ease';
+  
+  // Efecto hover
+  el.onmouseover = () => el.style.borderColor = 'var(--text-muted)';
+  el.onmouseout = () => el.style.borderColor = t.isRunning ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-light)';
+  
+  const chk = document.createElement('input');
+  chk.type = 'checkbox';
+  chk.checked = t.completed === 1;
+  chk.style.cursor = 'pointer';
+  chk.style.width = '16px';
+  chk.style.height = '16px';
+  chk.style.accentColor = 'var(--accent)';
+  chk.onchange = () => window.toggleTodoItem(t.id, chk.checked);
+  
+  const txt = document.createElement('span');
+  txt.textContent = t.title;
+  txt.style.flex = '1';
+  txt.style.fontSize = isQuick ? '13px' : '14px';
+  txt.style.textDecoration = t.completed ? 'line-through' : 'none';
+  txt.style.color = t.completed ? 'var(--text-muted)' : (t.isRunning ? 'var(--accent)' : 'var(--text-main)');
+  txt.style.fontWeight = t.isRunning ? '500' : '400';
+  txt.style.whiteSpace = 'nowrap';
+  txt.style.overflow = 'hidden';
+  txt.style.textOverflow = 'ellipsis';
+
+  const controls = document.createElement('div');
+  controls.style.display = 'flex';
+  controls.style.alignItems = 'center';
+  controls.style.gap = '6px';
+
+  let currentMs = t.totalDuration || 0;
+  if (t.isRunning && t.startTime) {
+    currentMs += (Date.now() - t.startTime);
+  }
+
+  if (!t.completed) {
+    if (currentMs > 0 || t.isRunning) {
+      const badge = document.createElement('span');
+      badge.className = 'todo-timer-badge';
+      badge.dataset.id = t.id;
+      badge.dataset.start = t.startTime || '';
+      badge.dataset.duration = t.totalDuration || 0;
+      badge.style.fontSize = '12px';
+      badge.style.fontWeight = '600';
+      badge.style.letterSpacing = '0.5px';
+      badge.style.padding = '3px 8px';
+      badge.style.borderRadius = '12px';
+      badge.style.background = t.isRunning ? 'var(--accent)' : 'rgba(0,0,0,0.2)';
+      badge.style.color = t.isRunning ? '#fff' : 'var(--text-muted)';
+      badge.style.border = '1px solid ' + (t.isRunning ? 'transparent' : 'var(--border-light)');
+      badge.style.marginRight = '4px';
+      badge.style.boxShadow = t.isRunning ? '0 0 10px rgba(16,185,129,0.3)' : 'none';
+      badge.textContent = formatDuration(currentMs);
+      controls.appendChild(badge);
+    }
+
+    if (t.isRunning) {
+      const stopBtn = document.createElement('button');
+      stopBtn.className = 'btn-refresh danger';
+      stopBtn.innerHTML = '<i data-lucide="square" style="width:14px;height:14px;"></i>';
+      stopBtn.onclick = () => window.stopTodoTimer(t.id);
+      stopBtn.title = 'Pausar Timer';
+      stopBtn.style.background = 'rgba(239, 68, 68, 0.1)';
+      stopBtn.style.color = '#ef4444';
+      controls.appendChild(stopBtn);
+    } else {
+      const playBtn = document.createElement('button');
+      playBtn.className = 'btn-refresh';
+      playBtn.innerHTML = '<i data-lucide="play" style="width:14px;height:14px; fill:currentColor;"></i>';
+      playBtn.onclick = () => window.startTodoTimer(t.id);
+      const focusBtn = document.createElement('button');
+      focusBtn.className = 'todo-action-btn focus-btn';
+      focusBtn.innerHTML = '<i data-lucide="crosshair"></i>';
+      focusBtn.title = 'Modo Enfoque';
+      focusBtn.onclick = () => window.openFocusMode(t.id, t.title);
+      playBtn.title = 'Iniciar Timer';
+      playBtn.style.color = '#10b981';
+      playBtn.style.background = 'rgba(16, 185, 129, 0.1)';
+      controls.appendChild(playBtn);
+    }
+  } else {
+    if (currentMs > 0) {
+      const badge = document.createElement('span');
+      badge.style.fontSize = '12px';
+      badge.style.color = 'var(--text-muted)';
+      badge.style.marginRight = '4px';
+      badge.style.fontFamily = 'monospace';
+      badge.textContent = formatDuration(currentMs);
+      controls.appendChild(badge);
+    }
+  }
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn-refresh danger';
+  delBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;"></i>';
+  delBtn.onclick = () => window.deleteTodoItem(t.id);
+  delBtn.title = 'Eliminar';
+  controls.appendChild(delBtn);
+
+  el.appendChild(chk);
+  el.appendChild(txt);
+  el.appendChild(controls);
+
+  return el;
+}
+
+
+
+// DRAG & DROP STATE
+let draggedTodoId = null;
+let currentDraggedEl = null;
+
+window.dragStartTodo = (event, id) => {
+  draggedTodoId = id;
+  currentDraggedEl = event.currentTarget;
+  currentDraggedEl.style.opacity = '0.4';
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', id);
+};
+
+window.dragEndTodo = (event) => {
+  if (currentDraggedEl) currentDraggedEl.style.opacity = '1';
+  draggedTodoId = null;
+  currentDraggedEl = null;
+};
+
+window.dragOverCol = (event) => {
+  event.preventDefault();
+  event.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+};
+
+window.dragLeaveCol = (event) => {
+  event.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)';
+};
+
+window.dropCol = async (event, newStatus) => {
+  event.preventDefault();
+  event.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)';
+  if (draggedTodoId) {
+    await ipcRenderer.invoke('todo-action', 'updateStatus', { id: parseInt(draggedTodoId), status: newStatus });
+    renderTodoTab();
+  }
+};
+
+window.addNewColumn = async () => {
+  const name = prompt('Nombre de la nueva columna:');
+  if (name && name.trim()) {
+    await ipcRenderer.invoke('todo-action', 'addColumn', { colName: name.trim() });
+    renderTodoTab();
+  }
+};
+
+window.deleteColumn = async (name) => {
+  if (confirm(`¿Eliminar la columna "${name}"? (Sus tareas se moverán a la primera columna)`)) {
+    await ipcRenderer.invoke('todo-action', 'deleteColumn', { colName: name });
+    renderTodoTab();
+  }
+};
+
+function formatDuration(ms) {
+  let seconds = Math.floor(ms / 1000);
+  let hours = Math.floor(seconds / 3600);
+  seconds %= 3600;
+  let minutes = Math.floor(seconds / 60);
+  seconds %= 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function buildKanbanCardHTML(t) {
+  const isDone = t.status === 'Completado' || t.status.toLowerCase().includes('done') || t.completed === 1;
+
+  const card = document.createElement('div');
+  card.className = 'kanban-card';
+  card.draggable = true;
+  card.ondragstart = (e) => window.dragStartTodo(e, t.id);
+  card.ondragend = (e) => window.dragEndTodo(e);
+  
+  card.style.display = 'flex';
+  card.style.flexDirection = 'column';
+  card.style.gap = '10px';
+  card.style.padding = '14px 16px';
+  card.style.marginBottom = '12px';
+  card.style.borderRadius = '4px';
+  card.style.background = t.isRunning ? 'rgba(16, 185, 129, 0.1)' : (isDone ? 'rgba(0,0,0,0.2)' : 'rgba(30, 41, 59, 0.8)');
+  card.style.border = t.isRunning ? '1px solid rgba(16, 185, 129, 0.4)' : (isDone ? '1px solid rgba(255,255,255,0.02)' : '1px solid rgba(255, 255, 255, 0.08)');
+  card.style.boxShadow = t.isRunning ? '0 4px 15px rgba(16,185,129,0.2)' : '0 4px 6px rgba(0,0,0,0.3)';
+  card.style.cursor = 'grab';
+  card.style.transition = 'transform 0.1s, box-shadow 0.2s';
+  
+  card.onmouseover = () => {
+    if (!t.isRunning && !isDone) {
+      card.style.borderColor = 'rgba(255,255,255,0.2)';
+      card.style.transform = 'translateY(-2px)';
+    }
+  };
+  card.onmouseout = () => {
+    if (!t.isRunning && !isDone) {
+      card.style.borderColor = 'rgba(255,255,255,0.08)';
+      card.style.transform = 'translateY(0)';
+    }
+  };
+
+  // Header card
+  const header = document.createElement('div');
+  header.style.display = 'flex';
+  header.style.justifyContent = 'space-between';
+  header.style.alignItems = 'flex-start';
+  header.style.gap = '8px';
+  
+  const title = document.createElement('div');
+  title.textContent = t.title;
+  title.style.fontSize = '14px';
+  title.style.fontWeight = '500';
+  title.style.color = isDone ? 'rgba(255,255,255,0.4)' : '#fff';
+  title.style.textDecoration = isDone ? 'line-through' : 'none';
+  title.style.lineHeight = '1.4';
+  title.style.wordBreak = 'break-word';
+  
+  const delBtn = document.createElement('button');
+  delBtn.innerHTML = '<i data-lucide="x" style="width:14px; height:14px;"></i>';
+  delBtn.style.background = 'transparent';
+  delBtn.style.border = 'none';
+  delBtn.style.color = 'rgba(255,255,255,0.3)';
+  delBtn.style.cursor = 'pointer';
+  delBtn.style.padding = '0';
+  delBtn.onclick = () => window.deleteTodoItem(t.id);
+  delBtn.onmouseover = () => delBtn.style.color = '#ef4444';
+  delBtn.onmouseout = () => delBtn.style.color = 'rgba(255,255,255,0.3)';
+
+  header.appendChild(title);
+  
+  const editBtn = document.createElement('button');
+  editBtn.innerHTML = '<i data-lucide="edit-3" style="width:14px; height:14px;"></i>';
+  editBtn.style.background = 'transparent';
+  editBtn.style.border = 'none';
+  editBtn.style.color = 'rgba(255,255,255,0.3)';
+  editBtn.style.cursor = 'pointer';
+  editBtn.style.padding = '0';
+  editBtn.style.marginRight = '8px';
+  editBtn.onclick = () => window.openTodoEditor(t.id, t.title, t.description);
+  editBtn.onmouseover = () => editBtn.style.color = 'var(--accent)';
+  editBtn.onmouseout = () => editBtn.style.color = 'rgba(255,255,255,0.3)';
+  
+  const actionsBox = document.createElement('div');
+  actionsBox.style.display = 'flex';
+  actionsBox.appendChild(editBtn);
+  actionsBox.appendChild(delBtn);
+  header.appendChild(actionsBox);
+  
+  // Footer card (Timers)
+  const footer = document.createElement('div');
+  footer.style.display = 'flex';
+  footer.style.alignItems = 'center';
+  footer.style.justifyContent = 'space-between';
+  footer.style.marginTop = '4px';
+
+  let currentMs = t.totalDuration || 0;
+  if (t.isRunning && t.startTime) {
+    currentMs += (Date.now() - t.startTime);
+  }
+
+  const badgeBox = document.createElement('div');
+  if (currentMs > 0 || t.isRunning) {
+    const badge = document.createElement('span');
+    badge.className = 'todo-timer-badge';
+    badge.dataset.id = t.id;
+    badge.dataset.start = t.startTime || '';
+    badge.dataset.duration = t.totalDuration || 0;
+    badge.style.fontSize = '11px';
+    badge.style.fontWeight = '600';
+    badge.style.fontFamily = 'monospace';
+    badge.style.padding = '4px 8px';
+    badge.style.borderRadius = '2px';
+    badge.style.background = t.isRunning ? 'var(--accent)' : 'rgba(0,0,0,0.3)';
+    badge.style.color = t.isRunning ? '#fff' : 'rgba(255,255,255,0.5)';
+    badge.textContent = formatDuration(currentMs);
+    badgeBox.appendChild(badge);
+  }
+  footer.appendChild(badgeBox);
+
+  // Botones play/stop
+  if (!isDone) {
+    if (t.isRunning) {
+      const stopBtn = document.createElement('button');
+      stopBtn.innerHTML = '<i data-lucide="square" style="width:12px;height:12px;"></i>';
+      stopBtn.title = 'Pausar Timer';
+      stopBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+      stopBtn.style.color = '#ef4444';
+      stopBtn.style.border = 'none';
+      stopBtn.style.borderRadius = '2px';
+      stopBtn.style.padding = '4px 8px';
+      stopBtn.style.cursor = 'pointer';
+      stopBtn.onclick = () => window.stopTodoTimer(t.id);
+      footer.appendChild(stopBtn);
+    } else {
+      const playBtn = document.createElement('button');
+      playBtn.innerHTML = '<i data-lucide="play" style="width:12px;height:12px; fill:currentColor;"></i>';
+      playBtn.title = 'Iniciar Timer';
+      playBtn.style.background = 'rgba(16, 185, 129, 0.15)';
+      playBtn.style.color = 'var(--accent)';
+      playBtn.style.border = 'none';
+      playBtn.style.borderRadius = '2px';
+      playBtn.style.padding = '4px 8px';
+      playBtn.style.cursor = 'pointer';
+      playBtn.onclick = () => window.startTodoTimer(t.id);
+      const focusBtn = document.createElement('button');
+      focusBtn.className = 'todo-action-btn focus-btn';
+      focusBtn.innerHTML = '<i data-lucide="crosshair"></i>';
+      focusBtn.title = 'Modo Enfoque';
+      focusBtn.onclick = () => window.openFocusMode(t.id, t.title);
+      footer.appendChild(playBtn);
+    }
+  }
+
+  card.appendChild(header);
+  card.appendChild(footer);
+  return card;
+}
+
+async function renderTodoTab() {
+  const container = document.getElementById('kanban-board-container');
+  if (!container) return; // Puede que estemos renderizando el quick widget en el resumen
+  
+  const profileId = profiles[activeProfileIndex]?.id;
+  if (!profileId) return;
+
+  try {
+    const todos = await ipcRenderer.invoke('todo-action', 'get', { profileId });
+    const columns = await ipcRenderer.invoke('todo-action', 'getColumns');
+    
+    container.innerHTML = '';
+    
+    columns.forEach(col => {
+      const colDiv = document.createElement('div');
+      colDiv.style.flex = '0 0 300px';
+      colDiv.style.background = 'rgba(0, 0, 0, 0.2)';
+      colDiv.style.borderRadius = '4px';
+      colDiv.style.display = 'flex';
+      colDiv.style.flexDirection = 'column';
+      colDiv.style.maxHeight = '100%';
+      colDiv.style.border = '1px solid rgba(255,255,255,0.03)';
+      
+      // DnD Listeners
+      colDiv.ondragover = window.dragOverCol;
+      colDiv.ondragleave = window.dragLeaveCol;
+      colDiv.ondrop = (e) => window.dropCol(e, col);
+
+      // Header de columna
+      const colHeader = document.createElement('div');
+      colHeader.style.padding = '16px';
+      colHeader.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+      colHeader.style.display = 'flex';
+      colHeader.style.justifyContent = 'space-between';
+      colHeader.style.alignItems = 'center';
+
+      const title = document.createElement('h3');
+      title.textContent = col;
+      title.style.margin = '0';
+      title.style.fontSize = '14px';
+      title.style.color = 'rgba(255,255,255,0.8)';
+      title.style.fontWeight = '600';
+      title.style.letterSpacing = '0.5px';
+      title.style.textTransform = 'uppercase';
+
+      // Delete Col button
+      if (columns.length > 1) {
+        const delColBtn = document.createElement('button');
+        delColBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px; height:14px;"></i>';
+        delColBtn.style.background = 'none';
+        delColBtn.style.border = 'none';
+        delColBtn.style.color = 'rgba(255,255,255,0.2)';
+        delColBtn.style.cursor = 'pointer';
+        delColBtn.onclick = () => window.deleteColumn(col);
+        colHeader.appendChild(title);
+        colHeader.appendChild(delColBtn);
+      } else {
+        colHeader.appendChild(title);
+      }
+
+      colDiv.appendChild(colHeader);
+
+      // Tarjetas Container
+      const cardsContainer = document.createElement('div');
+      cardsContainer.style.padding = '16px';
+      cardsContainer.style.overflowY = 'auto';
+      cardsContainer.style.flex = '1';
+      cardsContainer.style.pointerEvents = 'none'; // Para que el div padre capture el DnD
+      
+      const colTodos = todos.filter(t => t.status === col);
+      if (colTodos.length === 0) {
+        const empty = document.createElement('div');
+        empty.textContent = 'Soltar aquí';
+        empty.style.textAlign = 'center';
+        empty.style.color = 'rgba(255,255,255,0.1)';
+        empty.style.fontSize = '12px';
+        empty.style.marginTop = '20px';
+        empty.style.border = '2px dashed rgba(255,255,255,0.05)';
+        empty.style.padding = '20px';
+        empty.style.borderRadius = '8px';
+        cardsContainer.appendChild(empty);
+      } else {
+        colTodos.forEach(t => {
+          const card = buildKanbanCardHTML(t);
+          card.style.pointerEvents = 'auto'; // Las tarjetas deben ser interactivas
+          cardsContainer.appendChild(card);
+        });
+      }
+
+      colDiv.appendChild(cardsContainer);
+      container.appendChild(colDiv);
+    });
+
+    // Add Column Button
+    const addColBtn = document.createElement('button');
+    addColBtn.style.flex = '0 0 300px';
+    addColBtn.style.background = 'rgba(255,255,255,0.02)';
+    addColBtn.style.border = '1px dashed rgba(255,255,255,0.1)';
+    addColBtn.style.borderRadius = '4px';
+    addColBtn.style.color = 'rgba(255,255,255,0.4)';
+    addColBtn.style.cursor = 'pointer';
+    addColBtn.style.fontSize = '14px';
+    addColBtn.style.fontWeight = '500';
+    addColBtn.style.display = 'flex';
+    addColBtn.style.alignItems = 'center';
+    addColBtn.style.justifyContent = 'center';
+    addColBtn.style.gap = '8px';
+    addColBtn.style.transition = 'all 0.2s';
+    addColBtn.innerHTML = '<i data-lucide="plus"></i> Nueva Columna';
+    addColBtn.onmouseover = () => addColBtn.style.background = 'rgba(255,255,255,0.05)';
+    addColBtn.onmouseout = () => addColBtn.style.background = 'rgba(255,255,255,0.02)';
+    addColBtn.onclick = () => window.addNewColumn();
+
+    container.appendChild(addColBtn);
+
+    lucide.createIcons();
+    renderQuickTodoTab(todos);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+
+async function renderQuickTodoTab(preloadedTodos = null) {
+  const container = document.getElementById('quick-todo-list');
+  if (!container) return; // widget desactivado o no presente
+  
+  const profileId = profiles[activeProfileIndex]?.id;
+  if (!profileId) return;
+
+  try {
+    let todos = preloadedTodos;
+    if (!todos) {
+      todos = await ipcRenderer.invoke('todo-action', 'get', { profileId });
+    }
+    container.innerHTML = '';
+    // Mostrar solo las pendientes, o si no hay, al menos las 3 mas recientes
+    let pending = todos.filter(t => !t.completed);
+    if (pending.length === 0) pending = todos.slice(0, 3);
+    else pending = pending.slice(0, 4); // top 4
+
+    if (pending.length === 0) {
+      container.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-muted); opacity:0.6;"><i data-lucide="coffee" style="width:32px; height:32px; margin-bottom:10px;"></i><span style="font-size:13px; font-weight:500;">Todo al día. Tómate un café.</span></div>';
+    } else {
+      pending.forEach(t => container.appendChild(buildTodoItemHTML(t, true)));
+      lucide.createIcons();
+    }
+  } catch (err) {}
+}
+
+async function submitQuickTodo() {
+  const input = document.getElementById('todo-quick-input');
+  const title = input.value.trim();
+  if (!title) return;
+
+  const profileId = profiles[activeProfileIndex]?.id;
+  if (profileId) {
+    await ipcRenderer.invoke('todo-action', 'add', { profileId, title });
+    input.value = '';
+    renderTodoTab(); // re render both
+  }
+}
+
+async function startTodoTimer(id) {
+  await ipcRenderer.invoke('todo-action', 'start', { id });
+  renderTodoTab();
+}
+
+async function stopTodoTimer(id) {
+  await ipcRenderer.invoke('todo-action', 'stop', { id });
+  renderTodoTab();
+}
+
+// Timer global
+setInterval(() => {
+  const badges = document.querySelectorAll('.todo-timer-badge');
+  badges.forEach(badge => {
+    const start = parseInt(badge.dataset.start);
+    if (start && start > 0) {
+      const dur = parseInt(badge.dataset.duration) || 0;
+      const currentMs = dur + (Date.now() - start);
+      badge.textContent = formatDuration(currentMs);
+    }
+  });
+}, 1000);
+
+
+async function submitTodo() {
+  const input = document.getElementById('todo-input-text');
+  const title = input.value.trim();
+  if (!title) return;
+  const profileId = profiles[activeProfileIndex]?.id;
+  if (profileId) {
+    await ipcRenderer.invoke('todo-action', 'add', { profileId, title });
+    input.value = '';
+    renderTodoTab();
+  }
+}
+async function toggleTodoItem(id, completed) {
+  await ipcRenderer.invoke('todo-action', 'toggle', { id, completed });
+  renderTodoTab();
+}
+async function deleteTodoItem(id) {
+  await ipcRenderer.invoke('todo-action', 'delete', { id });
+  renderTodoTab();
+}
+async function clearCompletedTodos() {
+  const profileId = profiles[activeProfileIndex]?.id;
+  if (profileId) {
+    await ipcRenderer.invoke('todo-action', 'clear', { profileId });
+    renderTodoTab();
+  }
+}
+// EXPORT GLOBALS FOR HTML
+// EXPORT GLOBALS FOR HTML
+window.switchTodoTab = window.switchTodoTab;
+window.openTodoEditor = window.openTodoEditor;
+window.submitTodo = submitTodo;
+window.submitQuickTodo = submitQuickTodo;
+window.toggleTodoItem = toggleTodoItem;
+window.deleteTodoItem = deleteTodoItem;
+window.clearCompletedTodos = clearCompletedTodos;
+window.startTodoTimer = startTodoTimer;
+window.stopTodoTimer = stopTodoTimer;
+window.setTodoFilter = setTodoFilter;
+window.submitQuickTodo = submitQuickTodo;
+window.toggleTodoItem = toggleTodoItem;
+window.deleteTodoItem = deleteTodoItem;
+window.clearCompletedTodos = clearCompletedTodos;
+window.startTodoTimer = startTodoTimer;
+window.stopTodoTimer = stopTodoTimer;
+
+// Ctrl+K Shortcut
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    // switch to todo tab
+    const tabs = document.querySelectorAll('.sidebar-nav li');
+    tabs.forEach(tab => {
+      if (tab.onclick.toString().includes("'todo'")) {
+        tab.click();
+      }
+    });
+    // focus input
+    setTimeout(() => {
+      const input = document.getElementById('todo-input-text');
+      if (input) input.focus();
+    }, 100);
+  }
+});
+
+// --- CHARTS LOGIC ---
+let chartInstances = {};
+
+async function renderCharts() {
+  // Esperar a que cargue Chart.js
+  if (typeof Chart === 'undefined') {
+    setTimeout(renderCharts, 100);
+    return;
+  }
+  
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.font.family = 'Inter, sans-serif';
+
+  const profileId = profiles[activeProfileIndex]?.id;
+  if (!profileId) return;
+
+  try {
+    const todos = await ipcRenderer.invoke('todo-action', 'get', { profileId });
+    const columns = await ipcRenderer.invoke('todo-action', 'getColumns');
+
+    // 1. Kanban Donut Chart
+    const ctxKanban = document.getElementById('chart-kanban');
+    if (ctxKanban) {
+      if (chartInstances['kanban']) chartInstances['kanban'].destroy();
+      
+      const counts = columns.map(col => todos.filter(t => t.status === col).length);
+      const bgColors = ['rgba(148, 163, 184, 0.6)', 'rgba(56, 189, 248, 0.6)', 'rgba(16, 185, 129, 0.6)', 'rgba(168, 85, 247, 0.6)', 'rgba(244, 63, 94, 0.6)'];
+      const borderColors = ['rgba(148, 163, 184, 1)', 'rgba(56, 189, 248, 1)', 'rgba(16, 185, 129, 1)', 'rgba(168, 85, 247, 1)', 'rgba(244, 63, 94, 1)'];
+
+      chartInstances['kanban'] = new Chart(ctxKanban, {
+        type: 'doughnut',
+        data: {
+          labels: columns,
+          datasets: [{
+            data: counts,
+            backgroundColor: bgColors.slice(0, columns.length),
+            borderColor: borderColors.slice(0, columns.length),
+            borderWidth: 1,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right' }
+          }
+        }
+      });
+    }
+
+    // 2. Productivity Bar Chart (Time Tracking)
+    const ctxTime = document.getElementById('chart-time');
+    if (ctxTime) {
+      if (chartInstances['time']) chartInstances['time'].destroy();
+      
+      const trackedTodos = todos.filter(t => t.totalDuration > 0).sort((a,b) => b.totalDuration - a.totalDuration).slice(0, 5);
+      const labels = trackedTodos.length > 0 ? trackedTodos.map(t => t.title.substring(0, 15) + '...') : ['Sin tareas'];
+      const dataMins = trackedTodos.length > 0 ? trackedTodos.map(t => (t.totalDuration / 60000).toFixed(1)) : [0];
+
+      chartInstances['time'] = new Chart(ctxTime, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Minutos invertidos',
+            data: dataMins,
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+            borderColor: 'rgba(16, 185, 129, 0.8)',
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // 3. Activity Line Chart (Mock Data over last 7 days)
+    const ctxCommits = document.getElementById('chart-commits');
+    if (ctxCommits) {
+      if (chartInstances['commits']) chartInstances['commits'].destroy();
+      
+      const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      const today = new Date().getDay();
+      const last7Days = [];
+      for(let i=6; i>=0; i--) last7Days.push(days[(today - i + 7) % 7]);
+
+      // Mock real-looking data
+      const mockData = [2, 5, 3, 8, 4, 10, 1];
+
+      chartInstances['commits'] = new Chart(ctxCommits, {
+        type: 'line',
+        data: {
+          labels: last7Days,
+          datasets: [{
+            label: 'Commits',
+            data: mockData,
+            fill: true,
+            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+            borderColor: 'rgba(56, 189, 248, 0.8)',
+            borderWidth: 2,
+            tension: 0.4,
+            pointBackgroundColor: '#0f172a'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+  } catch (err) {
+    console.error('Error rendering charts:', err);
+  }
+}
+// --- MARKDOWN EDITOR LOGIC REPLACED ---
+// --- MARKDOWN EDITOR LOGIC ---
+let activeEditTodoId = null;
+let easyMdeInstance = null;
+
+window.openTodoEditor = (id, title, description) => {
+  activeEditTodoId = id;
+  document.getElementById('todo-edit-title').value = title || '';
+  
+  if (!easyMdeInstance) {
+    easyMdeInstance = new EasyMDE({
+      element: document.getElementById('todo-edit-desc'),
+      spellChecker: false,
+      placeholder: 'Escribe tu markdown o pega una imagen aquí...',
+      uploadImage: true,
+      status: false, // Ocultar barra inferior fea
+      imageAccept: 'image/png, image/jpeg, image/jpg, image/gif',
+      imageUploadFunction: async (file, onSuccess, onError) => {
+        try {
+          const ext = file.name ? file.name.substring(file.name.lastIndexOf('.')) : '.png';
+          const arrayBuffer = await file.arrayBuffer();
+          const fileUrl = await ipcRenderer.invoke('save-todo-media', arrayBuffer, ext);
+          if (fileUrl) {
+            onSuccess(fileUrl);
+          } else {
+            onError('No se pudo guardar la imagen');
+          }
+        } catch (err) {
+          onError(err.message);
+        }
+      },
+      toolbar: [
+        'bold', 'italic', 'strikethrough', 'heading', '|',
+        'quote', 'unordered-list', 'ordered-list', '|',
+        'link', 'image', 'table', '|',
+        'preview', 'side-by-side', 'fullscreen', '|',
+        'guide'
+      ]
+    });
+
+    // Custom Paste Interceptor (Fallback for EasyMDE 2.x issue with Ctrl+V outside toolbars)
+    easyMdeInstance.codemirror.on('paste', async (cm, e) => {
+      if (e.clipboardData && e.clipboardData.items) {
+        for (const item of e.clipboardData.items) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            const ext = file.name ? file.name.substring(file.name.lastIndexOf('.')) : '.png';
+            const arrayBuffer = await file.arrayBuffer();
+            const fileUrl = await ipcRenderer.invoke('save-todo-media', arrayBuffer, ext);
+            if (fileUrl) {
+              const mdImg = `![imagen](${fileUrl})`;
+              cm.replaceSelection(mdImg);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  easyMdeInstance.value(description || '');
+  
+  document.getElementById('modal-todo-edit').classList.remove('hidden');
+  lucide.createIcons();
+  
+  // Refresh layout cause Codemirror buggy in hidden divs
+  setTimeout(() => {
+    easyMdeInstance.codemirror.refresh();
+  }, 50);
+};
+
+// Handlers for Save
+document.addEventListener('DOMContentLoaded', () => {
+  const saveBtn = document.getElementById('todo-edit-save');
+  if(saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const title = document.getElementById('todo-edit-title').value;
+      const desc = easyMdeInstance ? easyMdeInstance.value() : '';
+      if (activeEditTodoId) {
+        await ipcRenderer.invoke('todo-action', 'updateDescription', { id: activeEditTodoId, title, description: desc });
+        document.getElementById('modal-todo-edit').classList.add('hidden');
+        renderTodoTab();
+      }
+    });
+  }
+});
+
+// --- POMODORO & FOCUS MODE LOGIC ---
+let pomoTimer = null;
+let pomoTimeLeft = 25 * 60; // 25 mins
+let pomoCurrentState = 'focus';
+let pomoIsRunning = false;
+let pomoActiveTodoId = null;
+let pomoLofiEnabled = false;
+let pomoAccumulatedMs = 0;
+let pomoLastTick = 0;
+
+const POMO_TIMES = {
+  focus: 25 * 60,
+  short: 5 * 60,
+  long: 15 * 60
+};
+
+window.openFocusMode = (id, title) => {
+  pomoActiveTodoId = id;
+  document.getElementById('focus-task-title').textContent = title || 'Sesión de Enfoque';
+  document.getElementById('focus-mode-overlay').classList.remove('hidden');
+  window.setPomodoroMode('focus');
+  lucide.createIcons();
+};
+
+window.exitFocusMode = async () => {
+  if (pomoIsRunning) window.togglePomodoro(); // Pausa y guarda
+  if (pomoLofiEnabled) window.toggleLofi(); // Stop music when exiting
+  document.getElementById('focus-mode-overlay').classList.add('hidden');
+  pomoActiveTodoId = null;
+  renderTodoTab(); // refrescar tab para actualizar totalDuration visual
+};
+
+window.setPomodoroMode = (mode) => {
+  if (pomoIsRunning) window.togglePomodoro(); // pause if switching modes
+  
+  pomoCurrentState = mode;
+  pomoTimeLeft = POMO_TIMES[mode];
+  updatePomodoroDisplay();
+
+  // Update styles
+  ['focus', 'short', 'long'].forEach(m => {
+    const btn = document.getElementById('btn-pomo-' + m);
+    if (m === mode) {
+      btn.style.background = 'var(--accent)';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = '#94a3b8';
+    }
+  });
+};
+
+window.togglePomodoro = async () => {
+  const btn = document.getElementById('btn-pomo-toggle');
+  
+  if (pomoIsRunning) {
+    // Pausing
+    clearInterval(pomoTimer);
+    pomoIsRunning = false;
+    btn.innerHTML = '<i data-lucide="play" style="width:36px; height:36px; margin-left:6px;"></i>';
+    document.getElementById('focus-timer-display').style.color = '#f8fafc';
+    document.getElementById('focus-timer-display').style.textShadow = '0 0 40px rgba(16,185,129,0.2)';
+    
+    // Save accumulated time
+    if (pomoAccumulatedMs > 0 && pomoActiveTodoId) {
+      await ipcRenderer.invoke('todo-action', 'addDuration', { id: pomoActiveTodoId, duration: pomoAccumulatedMs });
+      pomoAccumulatedMs = 0;
+    }
+  } else {
+    // Starting
+    pomoIsRunning = true;
+    pomoLastTick = Date.now();
+    btn.innerHTML = '<i data-lucide="pause" style="width:36px; height:36px;"></i>';
+    document.getElementById('focus-timer-display').style.color = '#22c55e'; // Green
+    
+    pomoTimer = setInterval(() => {
+      const now = Date.now();
+      const delta = now - pomoLastTick;
+      pomoLastTick = now;
+      
+      if (pomoCurrentState === 'focus') {
+        pomoAccumulatedMs += delta;
+      }
+      
+      // We subtract 1 second approx for display logic
+      pomoTimeLeft--;
+      updatePomodoroDisplay();
+      
+      if (pomoTimeLeft <= 0) {
+        clearInterval(pomoTimer);
+        pomoIsRunning = false;
+        btn.innerHTML = '<i data-lucide="play" style="width:36px; height:36px; margin-left:6px;"></i>';
+        
+        // Auto-save on complete
+        if (pomoAccumulatedMs > 0 && pomoActiveTodoId) {
+          ipcRenderer.invoke('todo-action', 'addDuration', { id: pomoActiveTodoId, duration: pomoAccumulatedMs });
+          pomoAccumulatedMs = 0;
+        }
+        
+        // Send notification
+        new Notification('DevDash Focus', { body: `Ciclo completado (${pomoCurrentState}). ¡Buen trabajo!` });
+      }
+    }, 1000);
+  }
+  lucide.createIcons();
+};
+
+window.resetPomodoro = async () => {
+  if (pomoIsRunning) window.togglePomodoro(); // This will pause and save
+  pomoTimeLeft = POMO_TIMES[pomoCurrentState];
+  updatePomodoroDisplay();
+};
+
+function updatePomodoroDisplay() {
+  const m = Math.floor(pomoTimeLeft / 60).toString().padStart(2, '0');
+  const s = (pomoTimeLeft % 60).toString().padStart(2, '0');
+  document.getElementById('focus-timer-display').textContent = `${m}:${s}`;
+}
+
+window.toggleLofi = () => {
+  const container = document.getElementById('lofi-player-container');
+  const btn = document.getElementById('btn-pomo-lofi');
+  pomoLofiEnabled = !pomoLofiEnabled;
+  
+  if (pomoLofiEnabled) {
+    // Lofi Girl live stream youtube embed
+    container.innerHTML = '<iframe width="100" height="100" src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media"></iframe>';
+    btn.innerHTML = '<i data-lucide="headphones"></i> Lofi Radio: Encendido';
+    btn.style.color = '#22c55e';
+    btn.style.borderColor = '#22c55e';
+  } else {
+    container.innerHTML = '';
+    btn.innerHTML = '<i data-lucide="headphones"></i> Lofi Radio: Apagado';
+    btn.style.color = '#94a3b8';
+    btn.style.borderColor = 'rgba(255,255,255,0.2)';
+  }
+  lucide.createIcons();
+};

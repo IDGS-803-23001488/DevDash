@@ -14,5 +14,8 @@
     "axios": "^1.18.1",
     "dotenv": "^17.4.2",
     "electron": "^42.5.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.6"
   }
 }
